@@ -16,14 +16,14 @@ handlers:
     class: logging.FileHandler
     level: INFO
     formatter: simpleFormatter
-    filename: logs/runlog.log
+    filename: src/logs/runlog.log
     encoding: utf-8
   
   dataHandler:
     class: logging.FileHandler
     level: DEBUG
     formatter: simpleFormatter
-    filename: logs/data_trail.log
+    filename: src/logs/data_trail.log
     encoding: utf-8
 
 loggers:
@@ -38,8 +38,8 @@ loggers:
     propagate: false
 
   data:
-    level: DEBUG
-    handlers: [consoleHandler]
+    level: INFO
+    handlers: [consoleHandler, dataHandler, fileHandler]
     propagate: false
   
   checker:
