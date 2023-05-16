@@ -56,7 +56,7 @@ def run_probing_train(args: argparse.Namespace):
     test_set = load_dataset("json", data_files=data_files, split="test")
     # get d and c for each sample
     #! THIS IS WHERE CODE IS CONVERTED TO AST, THEN BINARY TREE, AND THEN THE (D,C,U) TUPLE
-    convert_sample_to_features(train_set[0]["original_string"], parser, args.lang)
+    # convert_sample_to_features(train_set[0]["original_string"], parser, args.lang)
     train_set = train_set.map(
         lambda e: convert_sample_to_features(e["original_string"], parser, args.lang)
     )
