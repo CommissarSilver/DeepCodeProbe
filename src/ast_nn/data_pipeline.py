@@ -93,12 +93,16 @@ class Pipeline:
         self.pairs = pairs
         logger.info("Finished reading clone pairs")
 
-    # split data for training, developing and testing
     def split_data(self):
-        data_path = self.root + "/" + self.language + "/"
+        """
+        Split data into train, dev and test sets
+        """
+        data_path = os.path.join(self.root, self.language, "/")
         data = self.pairs
-        data_num = len(data)
-        ratios = [int(r) for r in self.ratio.split(":")]
+        data_num = len(data)  # number of paris
+        ratios = [
+            int(r) for r in self.ratio.split(":")
+        ]  # ratio to split data into train, dev and test sets
         train_split = int(ratios[0] / sum(ratios) * data_num)
         val_split = train_split + int(ratios[1] / sum(ratios) * data_num)
 
@@ -111,38 +115,46 @@ class Pipeline:
             if not os.path.exists(path):
                 os.mkdir(path)
 
-        train_path = data_path + "train/"
+        train_path = os.path.join(data_path, "train/")
         check_or_create(train_path)
-        self.train_file_path = train_path + "train_.pkl"
+        self.train_file_path = os.path.join(train_path, "train_.pkl")
         train.to_pickle(self.train_file_path)
 
-        dev_path = data_path + "dev/"
+        dev_path = os.path.join(data_path, "dev/")
         check_or_create(dev_path)
-        self.dev_file_path = dev_path + "dev_.pkl"
+        self.dev_file_path = os.path.join(dev_path, "dev_.pkl")
         dev.to_pickle(self.dev_file_path)
 
-        test_path = data_path + "test/"
+        test_path = os.path.join(data_path, "test/")
         check_or_create(test_path)
-        self.test_file_path = test_path + "test_.pkl"
+        self.test_file_path = os.path.join(test_path, "test_.pkl")
         test.to_pickle(self.test_file_path)
 
         logger.info("Finished splitting data into train, dev and test sets")
 
     # construct dictionary and train word embedding
-    def dictionary_and_embedding(self, input_file, size):
+    def dictionary_and_embedding(self, input_file_path: str, size: int):
+        """
+        construct the dictionary and word embedding
+
+        Args:
+            input_file_path (str): path to the input file
+            size (int): size of the word2vec model
+        """
         self.size = size
-        data_path = self.root + "/" + self.language + "/"
+        data_path = os.path.join(self.root, self.language, "/")
 
-        if not input_file:
-            input_file = self.train_file_path
+        if not input_file_path:
+            input_file_path = self.train_file_path
 
-        pairs = pd.read_pickle(input_file)
+        pairs = pd.read_pickle(input_file_path)
         train_ids = pairs["id1"].append(pairs["id2"]).unique()
 
+        #! there are some problems with the java dataset, we need to drop the ones that haveot been processed in the proceeding steps
         trees = self.sources.set_index("id").reindex(train_ids).dropna()
         # trees = self.sources.set_index("id", drop=True).loc[train_ids]
 
-        if not os.path.exists(data_path + "embeddings"):
+        if not os.path.exists(os.path.join(data_path, "embeddings")):
             os.mkdir(data_path + "embeddings")
 
         if self.language == "c":
@@ -163,11 +175,19 @@ class Pipeline:
 
         from gensim.models.word2vec import Word2Vec
 
-        w2v = Word2Vec(corpus, size=size, workers=16, sg=1, max_final_vocab=3000)
-        w2v.save(data_path + "embeddings/node_w2v_" + str(size))
+        try:
+            w2v = Word2Vec(corpus, size=size, workers=16, sg=1, max_final_vocab=3000)
+            logger.info("Finished training word2vec model")
+            w2v.save(data_path + "embeddings/node_w2v_" + str(size))
+        except Exception as e:
+            logger.exception("There was a problem in training the word2vec model: %s", e)
+            raise e
 
-    # generate block sequences with index representations
     def generate_block_seqs(self):
+        """
+        This function is only used for generating batch inputs for the model.
+        Generate block sequences with index representations
+        """
         if self.language == "c":
             from prepare_data import get_blocks as func
         else:
@@ -199,14 +219,16 @@ class Pipeline:
             return tree
 
         trees = pd.DataFrame(self.sources, copy=True)
-
         trees["code"] = trees["code"].apply(trans2seq)
+
         if "label" in trees.columns:
             trees.drop("label", axis=1, inplace=True)
-        self.blocks = trees
 
-    # merge pairs
-    def merge(self, data_path, part):
+        self.blocks = trees
+        logger.info("Finished generating block sequences")
+
+    def merge(self, data_path: str, part: str):
+        """# merge pairs"""
         pairs = pd.read_pickle(data_path)
         pairs["id1"] = pairs["id1"].astype(int)
         pairs["id2"] = pairs["id2"].astype(int)
@@ -216,6 +238,7 @@ class Pipeline:
         df.dropna(inplace=True)
 
         df.to_pickle(self.root + "/" + self.language + "/" + part + "/blocks.pkl")
+        logger.info("Finished merging pairs")
 
     # run for processing data to train
     def run(self):
@@ -227,13 +250,12 @@ class Pipeline:
 
         self.read_pairs("clone_ids.pkl")
 
-        # print("split data...")
         self.split_data()
-        # print("train word embedding...")
+
         self.dictionary_and_embedding(None, 128)
-        # print("generate block sequences...")
+
         self.generate_block_seqs()
-        # print("merge pairs and blocks...")
+
         self.merge(self.train_file_path, "train")
         self.merge(self.dev_file_path, "dev")
         self.merge(self.test_file_path, "test")
@@ -242,23 +264,32 @@ class Pipeline:
 def process_input(input: str, lang: str, word2vec_path: str):
     from gensim.models.word2vec import Word2Vec
 
-    # get AST of input
-    if lang == "c":
-        from pycparser import c_parser
-        from prepare_data import get_blocks as func
+    try:
+        # get AST of input
+        if lang == "c":
+            from pycparser import c_parser
+            from prepare_data import get_blocks as func
 
-        code_ast = c_parser.CParser().parse(input)
-    elif lang == "java":
-        import javalang
-        from utils import get_blocks_v1 as func
+            code_ast = c_parser.CParser().parse(input)
+        elif lang == "java":
+            import javalang
+            from utils import get_blocks_v1 as func
 
-        tokens = javalang.tokenizer.tokenize(input)
-        parser = javalang.parser.Parser(tokens)
-        code_ast = parser.parse_member_declaration()
+            tokens = javalang.tokenizer.tokenize(input)
+            parser = javalang.parser.Parser(tokens)
+            code_ast = parser.parse_member_declaration()
+        logger.info("Finished parsing single input")
+    except Exception as e:
+        logger.exception("There was a problem in parsing the input: %s", e)
+        raise e
     # load appropriate word2vec model
-    word2vec = Word2Vec.load(word2vec_path).wv
-    vocab = word2vec.vocab
-    max_token = word2vec.syn0.shape[0]
+    try:
+        word2vec = Word2Vec.load(word2vec_path).wv
+        vocab = word2vec.vocab
+        max_token = word2vec.syn0.shape[0]
+    except Exception as e:
+        logger.exception("There was a problem in loading the word2vec model: %s", e)
+        raise e
 
     # convert AST to index representation
     def tree_to_index(node):
@@ -278,7 +309,15 @@ def process_input(input: str, lang: str, word2vec_path: str):
             tree.append(btree)
         return tree
 
-    code_tree = trans2seq(code_ast)
+    try:
+        code_tree = trans2seq(code_ast)
+        logger.info("Finished converting AST to index representation")
+    except Exception as e:
+        logger.exception(
+            "There was a problem in converting the AST to index representation: %s", e
+        )
+        raise e
+
     return code_tree
 
 
