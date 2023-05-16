@@ -27,6 +27,11 @@ handlers:
     encoding: utf-8
 
 loggers:
+  data_processing:
+    level: INFO
+    handlers: [consoleHandler, fileHandler]
+    propagate: false
+  
   process_scripts:
     level: DEBUG
     handlers: [consoleHandler]
