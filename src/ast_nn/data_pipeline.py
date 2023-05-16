@@ -321,12 +321,8 @@ def process_input(input: str, lang: str, word2vec_path: str):
     return code_tree
 
 
-# @click.command()
-# @click.option(
-#     "--lang", required=True, type=str, help="Language for the code input ('c' or 'java')"
-# )
 def main(lang):
-    ppl = Pipeline("3:1:1", "dataset", "java")
+    ppl = Pipeline(ratio="3:1:1", root="dataset", language=lang)
     ppl.run()
 
 
