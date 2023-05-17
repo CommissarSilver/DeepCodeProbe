@@ -128,8 +128,36 @@ def run_probing_train(
     if model_type == "astnn":
         from ast_nn.src.data_pipeline import process_input
         from ast_nn.src.model import BatchProgramCC
+        from gensim.models.word2vec import Word2Vec
 
-        model = BatchProgramCC()
+        word2vec = Word2Vec.load(
+            os.path.join(
+                os.getcwd(),
+                "src",
+                "ast_nn",
+                "dataset",
+                'c',
+                "embeddings",
+                "node_w2v_128",
+            )
+        ).wv
+
+        MAX_TOKENS = word2vec.syn0.shape[0]
+        EMBEDDING_DIM = word2vec.syn0.shape[1]
+
+        embeddings = np.zeros((MAX_TOKENS + 1, EMBEDDING_DIM), dtype="float32")
+        embeddings[: word2vec.syn0.shape[0]] = word2vec.syn0
+
+        model = BatchProgramCC(
+            embedding_dim=word2vec.syn0.shape[1],
+            hidden_dim=100,
+            vocab_size=word2vec.syn0.shape[0] + 1,
+            encode_dim=128,
+            label_size=1,
+            batch_size=32,
+            use_gpu=False,
+            pretrained_weight=embeddings,
+        )
 
         model.load_state_dict(
             torch.load(
@@ -139,7 +167,7 @@ def run_probing_train(
             )
         )
         logger.info("Loaded ASTNN model.")
-    
+
     lmodel = lmodel.to(args.device)
 
     probe_model = ParserProbe(
@@ -236,9 +264,9 @@ def run_probing_train(
     logger.info("Loading test set.")
     test_dataloader = DataLoader(
         dataset=test_set,
-        batch_size=args.batch_size,
+        batch_size=batch_size,
         shuffle=False,
-        collate_fn=lambda batch: collator_fn(batch, tokenizer),
+        collate_fn=lambda batch: collator_fn(batch),
         num_workers=8,
     )
 
