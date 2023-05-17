@@ -278,6 +278,7 @@ def process_input(input: str, lang: str, word2vec_path: str):
             tokens = javalang.tokenizer.tokenize(input)
             parser = javalang.parser.Parser(tokens)
             code_ast = parser.parse_member_declaration()
+        
         logger.info("Finished parsing single input")
     except Exception as e:
         logger.exception("There was a problem in parsing the input: %s", e)
@@ -327,4 +328,10 @@ def main(lang):
 
 
 if __name__ == "__main__":
-    main("java")
+    # main("java")
+    j = process_input(
+        'public class Test { public static void main(String[] args) { System.out.println("Hello World!"); } }',
+        "java",
+        "src/ast_nn/dataset/java/embeddings/node_w2v_128",
+    )
+    print('hi')
