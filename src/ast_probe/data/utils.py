@@ -65,3 +65,22 @@ def remove_comments_and_docstrings_python(source):
         last_lineno = end_line
     out = "\n".join(l for l in out.splitlines() if l.strip())
     return out
+
+
+def match_tokenized_to_untokenized_roberta(untokenized_sent, tokenizer):
+    tokenized = []
+    mapping = {}
+    cont = 0
+    for j, t in enumerate(untokenized_sent):
+        if j == 0:
+            temp = [k for k in tokenizer.tokenize(t) if k != "Ġ"]
+            tokenized.append(temp)
+            mapping[j] = [f for f in range(cont, len(temp) + cont)]
+            cont = cont + len(temp)
+        else:
+            temp = [k for k in tokenizer.tokenize(" " + t) if k != "Ġ"]
+            tokenized.append(temp)
+            mapping[j] = [f for f in range(cont, len(temp) + cont)]
+            cont = cont + len(temp)
+    flat_tokenized = [item for sublist in tokenized for item in sublist]
+    return flat_tokenized, mapping

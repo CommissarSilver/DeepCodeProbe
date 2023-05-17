@@ -9,8 +9,8 @@ from .code2ast import code2ast, get_tokens_ast
 
 logger = logging.getLogger("data")
 
-PY_LANGUAGE = Language("src/ast-probe/grammars/languages.so", "python")
-JAVA_LANGUAGE = Language("src/ast-probe/grammars/languages.so", "java")
+PY_LANGUAGE = Language("/Users/ahura/Nexus/Leto/src/ast_probe/grammars/languages.so", "python")
+JAVA_LANGUAGE = Language("/Users/ahura/Nexus/Leto/src/ast_probe/grammars/languages.so", "java")
 
 PY_PARSER = Parser()
 PY_PARSER.set_language(PY_LANGUAGE)
