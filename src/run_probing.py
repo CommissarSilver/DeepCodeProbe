@@ -6,20 +6,21 @@ from torch.utils.data import DataLoader
 from datasets import load_dataset
 from tree_sitter import Parser
 from tqdm import tqdm
-from data import (
+
+from ast_probe.data import (
     convert_sample_to_features,
     PY_LANGUAGE,
     JAVA_LANGUAGE,
 )
-from probe import ParserProbe, ParserLoss, get_embeddings
-from data.utils import (
+from ast_probe.probe import ParserProbe, ParserLoss, get_embeddings
+from ast_probe.data.utils import (
     match_tokenized_to_untokenized_roberta,
     remove_comments_and_docstrings_java_js,
     remove_comments_and_docstrings_python,
 )
-from probe.utils import collator_fn
-from data.data_loading import get_non_terminals_labels, convert_to_ids
-from data.binary_tree import (
+from ast_probe.probe.utils import collator_fn
+from ast_probe.data.data_loading import get_non_terminals_labels, convert_to_ids
+from ast_probe.data.binary_tree import (
     distance_to_tree,
     remove_empty_nodes,
     extend_complex_nodes,
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 def run_probing_train(
     args: argparse.Namespace,
     language="python",
-    dataset_path="/Users/ahura/Nexus/Leto/src/ast_probe/dataset/python",
+    dataset_path=os.path.join(os.getcwd(), "src", "ast_probe", "dataset", "python"),
     batch_size=32,
     model_type="astnn",
 ):
@@ -78,6 +79,7 @@ def run_probing_train(
             train_set["u"], valid_set["u"], test_set["u"]
         )
         ids_to_labels_u = {x: y for y, x in labels_to_ids_u.items()}
+
         with open(labels_file_path, "wb") as f:
             pickle.dump(
                 {
@@ -88,6 +90,8 @@ def run_probing_train(
                 },
                 f,
             )
+
+        logger.info(f"Labels file did not exist. Generated and saved: {labels_file_path}")
     else:
         with open(labels_file_path, "rb") as f:
             data = pickle.load(f)
@@ -95,6 +99,8 @@ def run_probing_train(
             ids_to_labels_c = data["ids_to_labels_c"]
             labels_to_ids_u = data["labels_to_ids_u"]
             ids_to_labels_u = data["ids_to_labels_u"]
+
+        logger.info(f"Loaded labels file: {labels_file_path}")
 
     train_set = train_set.map(lambda e: convert_to_ids(e["c"], "c", labels_to_ids_c))
     valid_set = valid_set.map(lambda e: convert_to_ids(e["c"], "c", labels_to_ids_c))
@@ -119,18 +125,21 @@ def run_probing_train(
         num_workers=0,
     )
 
-    logger.info("Loading models.")
     if model_type == "astnn":
-        from ast_nn.data_pipeline import process_input
-        from ast_nn.model import BatchProgramCC
+        from ast_nn.src.data_pipeline import process_input
+        from ast_nn.src.model import BatchProgramCC
 
         model = BatchProgramCC()
+
         model.load_state_dict(
             torch.load(
-                "/Users/ahura/Nexus/Leto/src/ast_nn/trained_models/astnn_model_c.pkl"
+                os.path.join(
+                    os.getcwd(), "src", "ast_nn", "trained_models", "astnn_model_c.pkl"
+                )
             )
         )
-        pass
+        logger.info("Loaded ASTNN model.")
+    
     lmodel = lmodel.to(args.device)
 
     probe_model = ParserProbe(

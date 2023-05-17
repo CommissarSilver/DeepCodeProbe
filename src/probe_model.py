@@ -9,7 +9,8 @@ from ast_probe.probe import (
     utils as ast_probe_utils,
 )
 
-from ast_nn.model import BatchProgramCC as model_under_test
+from ast_nn.src.model import BatchProgramCC as model_under_test
+from ast_nn.src.data_pipeline import process_input as ast_nn_process_input
 
 
 word2vec = Word2Vec.load("src/ast_nn/node_w2v_128").wv
