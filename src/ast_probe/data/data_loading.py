@@ -9,8 +9,12 @@ from .code2ast import code2ast, get_tokens_ast
 
 logger = logging.getLogger("data")
 
-PY_LANGUAGE = Language("/Users/ahura/Nexus/Leto/src/ast_probe/grammars/languages.so", "python")
-JAVA_LANGUAGE = Language("/Users/ahura/Nexus/Leto/src/ast_probe/grammars/languages.so", "java")
+PY_LANGUAGE = Language(
+    os.path.join(os.getcwd(), "src", "ast_probe", "grammars", "languages.so"), "python"
+)
+JAVA_LANGUAGE = Language(
+    os.path.join(os.getcwd(), "src", "ast_probe", "grammars", "languages.so"), "java"
+)
 
 PY_PARSER = Parser()
 PY_PARSER.set_language(PY_LANGUAGE)
@@ -31,7 +35,7 @@ def convert_sample_to_features(code, parser, lang):
         )
     except Exception as e:
         logger.exception(f"Error while converting sample to features: {e}")
-        d = [], c = [], u = [], code_tokens = []
+        pass
 
     return {
         "d": d,
