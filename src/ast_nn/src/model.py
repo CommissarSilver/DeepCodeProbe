@@ -3,6 +3,8 @@ import torch.nn.functional as F
 import torch
 from torch.autograd import Variable
 import random
+from gensim.models.word2vec import Word2Vec
+import os
 
 
 class BatchTreeEncoder(nn.Module):
@@ -108,6 +110,8 @@ class BatchProgramCC(nn.Module):
         batch_size,
         use_gpu=False,
         pretrained_weight=None,
+        word2vec_path=None,
+        language=None,
     ):
         super(BatchProgramCC, self).__init__()
         self.stop = [vocab_size - 1]
@@ -142,6 +146,65 @@ class BatchProgramCC(nn.Module):
         self.hidden = self.init_hidden()
         self.dropout = nn.Dropout(0.2)
 
+        word2vec = Word2Vec.load(word2vec_path).wv
+        self.vocab = word2vec.vocab
+        self.max_token = word2vec.syn0.shape[0]
+        self.lang = language
+
+    def process_input(self, input_batch):
+        try:
+            # get AST of input
+            if self.lang == "c":
+                from pycparser import c_parser
+                from ast_nn.src.prepare_data import get_blocks as func
+
+                code_asts = [c_parser.CParser().parse(i) for i in input_batch]
+            elif self.lang == "java":
+                import javalang
+                from ast_nn.src.utils import get_blocks_v1 as func
+
+                tokens = [javalang.tokenizer.tokenize(i) for i in input_batch]
+                parsers = [javalang.parser.Parser(t) for t in tokens]
+                code_asts = [p.parse_member_declaration() for p in parsers]
+
+            # logger.info("Finished parsing single input")
+        except Exception as e:
+            # logger.exception("There was a problem in parsing the input: %s", e)
+            raise e
+
+        # convert AST to index representation
+        def tree_to_index(node):
+            token = node.token
+            result = [self.vocab[token].index if token in self.vocab else self.max_token]
+            children = node.children
+            for child in children:
+                result.append(tree_to_index(child))
+            return result
+
+        def trans2seq(r):
+            blocks = []
+            func(r, blocks)
+            tree = []
+            for b in blocks:
+                btree = tree_to_index(b)
+                tree.append(btree)
+            return tree
+
+        try:
+            code_trees = [trans2seq(code_ast) for code_ast in code_asts]
+            x = [
+                self.vocab[token].index if token in self.vocab else self.max_token
+                for token in input_batch[0].split()
+            ]
+            # logger.info("Finished converting AST to index representation")
+        except Exception as e:
+            # logger.exception(
+            #     "There was a problem in converting the AST to index representation: %s", e
+            # )
+            raise e
+
+        return code_trees
+
     def init_hidden(self):
         if self.gpu is True:
             if isinstance(self.bigru, nn.LSTM):
@@ -171,6 +234,8 @@ class BatchProgramCC(nn.Module):
         return zeros
 
     def encode(self, x):
+        x = self.process_input(x)
+
         lens = [len(item) for item in x]
         max_len = max(lens)
 
@@ -187,6 +252,7 @@ class BatchProgramCC(nn.Module):
             if max_len - lens[i]:
                 seq.append(self.get_zeros(max_len - lens[i]))
             start = end
+
         encodes = torch.cat(seq)
         encodes = encodes.view(self.batch_size, max_len, -1)
         # since enforce_sorted is not supported in this pytorch version, we need to do it manually
@@ -194,19 +260,20 @@ class BatchProgramCC(nn.Module):
         encodes = torch.index_select(encodes, dim=0, index=sorted_indices)
 
         encodes = nn.utils.rnn.pack_padded_sequence(encodes, torch.LongTensor(lens), True)
+
         # return encodes
 
         gru_out, _ = self.bigru(encodes, self.hidden)
-        gru_out, _ = nn.utils.rnn.pad_packed_sequence(
+        gru_out_hidden, _ = nn.utils.rnn.pad_packed_sequence(
             gru_out, batch_first=True, padding_value=-1e9
         )
 
-        gru_out = torch.transpose(gru_out, 1, 2)
+        gru_out = torch.transpose(gru_out_hidden, 1, 2)
         # pooling
         gru_out = F.max_pool1d(gru_out, gru_out.size(2)).squeeze(2)
         # gru_out = gru_out[:,-1]
 
-        return gru_out
+        return gru_out, gru_out_hidden
 
     def forward(self, x1, x2):
         lvec, rvec = self.encode(x1), self.encode(x2)
