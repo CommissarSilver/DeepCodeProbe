@@ -42,10 +42,12 @@ class Pipeline:
         input_path = os.path.join(self.root, self.language, input_file)
 
         if output_file is None:
-            source = pd.read_pickle(input_path)
+            source = pd.read_pickle(input_path)  # read the input file
             logger.info("Inputs have already been processed. Loadgin processed file.")
         else:
-            output_path = os.path.join(self.root, self.language, output_file)
+            output_path = os.path.join(
+                self.root, self.language, output_file
+            )  # output path
             logger.info("No processed inputs found. Parsing inputs.")
 
             if self.language == "c":
@@ -54,23 +56,25 @@ class Pipeline:
                 parser = c_parser.CParser()
                 source = pd.read_pickle(input_path)
                 source.columns = ["id", "code", "label"]
-                source["code"] = source["code"].progress_apply(parser.parse)
+                source["code"] = source["code"].progress_apply(
+                    parser.parse
+                )  # parse the code to generate AST
                 source.to_pickle(output_path) if output_file else None
 
                 logger.info("Finished parsing C code")
-            else:
+            elif self.language == "java":
                 import javalang
 
                 def parse_program(func):
                     try:
                         tokens = javalang.tokenizer.tokenize(func)
                         parser = javalang.parser.Parser(tokens)
-                        tree = parser.parse_member_declaration()
+                        tree = (
+                            parser.parse_member_declaration()
+                        )  # parse the code to generate AST
                         return tree
                     except Exception as e:
-                        logger.warning(
-                            "There was a problem in processing Java code: %s. Skipped", e
-                        )
+                        logger.warning("Problem processing Java code: %s. Skipped", e)
 
                 source = pd.read_csv(input_path, delimiter="\t")
                 source.columns = ["id", "code"]
@@ -278,7 +282,7 @@ def process_input(input: str, lang: str, word2vec_path: str):
             tokens = javalang.tokenizer.tokenize(input)
             parser = javalang.parser.Parser(tokens)
             code_ast = parser.parse_member_declaration()
-        
+
         logger.info("Finished parsing single input")
     except Exception as e:
         logger.exception("There was a problem in parsing the input: %s", e)
@@ -334,4 +338,4 @@ if __name__ == "__main__":
         "java",
         "src/ast_nn/dataset/java/embeddings/node_w2v_128",
     )
-    print('hi')
+    print("hi")
