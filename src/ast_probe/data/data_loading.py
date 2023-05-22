@@ -35,7 +35,7 @@ def convert_sample_to_features(code, parser, lang):
         )
     except Exception as e:
         logger.exception(f"Error while converting sample to features: {e}")
-        pass
+        d, c, u, code_tokens = None, None, None, []
 
     return {
         "d": d,
