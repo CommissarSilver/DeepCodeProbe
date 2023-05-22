@@ -1,6 +1,6 @@
 import logging, logging.config, os, yaml
 from data.data_loading import JAVA_PARSER, JAVA_LANGUAGE, convert_sample_to_features
-from data.collator import collator_fn
+# from data.collator import collator_fn
 from transformers import AutoTokenizer
 
 with open(os.path.join(os.getcwd(), "src", "logging_config.yaml"), "r") as f:
