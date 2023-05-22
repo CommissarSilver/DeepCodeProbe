@@ -5,7 +5,11 @@ import re
 import sys
 from gensim.models.word2vec import Word2Vec
 import pickle
-from tree import ASTNode, SingleNode
+
+try:
+    from tree import ASTNode, SingleNode
+except ModuleNotFoundError:
+    from ast_nn.src.tree import ASTNode, SingleNode
 import numpy as np
 
 
@@ -87,4 +91,3 @@ def generate_block_seqs(self):
     if "label" in trees.columns:
         trees.drop("label", axis=1, inplace=True)
     self.blocks = trees
-
