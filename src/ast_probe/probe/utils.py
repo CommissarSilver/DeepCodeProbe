@@ -7,12 +7,13 @@ from torch_scatter import scatter_mean
 def get_embeddings(all_inputs, model_name, model, layer):
     if model_name == "astnn":
         with torch.no_grad():
-            embs = model.encode(all_inputs)
+            _, embs = model.encode(all_inputs)
 
     return embs
 
 
 def collator_fn(batch):
+    original_code_string = [b["original_string"] for b in batch]
     tokens = [b["code_tokens"] for b in batch]
     cs = [b["c"] for b in batch]
     ds = [b["d"] for b in batch]
@@ -25,4 +26,4 @@ def collator_fn(batch):
     ds = torch.tensor([d + [-1] * (max_len_tokens - 1 - len(d)) for d in ds])
     us = torch.tensor([u + [-1] * (max_len_tokens - len(u)) for u in us])
 
-    return ds, cs, us, torch.tensor(batch_len_tokens)
+    return ds, cs, us, torch.tensor(batch_len_tokens), original_code_string
