@@ -7,6 +7,8 @@ from datasets import load_dataset
 from tree_sitter import Parser
 from tqdm import tqdm
 
+from ast_nn.src.code_to_repr import code_to_index
+
 from ast_probe.data import (
     convert_sample_to_features,
     PY_LANGUAGE,
@@ -34,10 +36,12 @@ logger = logging.getLogger(__name__)
 
 def run_probing_train(
     args: argparse.Namespace,
-    language="python",
-    dataset_path=os.path.join(os.getcwd(), "src", "ast_probe", "dataset", "python"),
+    language="java",
+    dataset_path="/Users/ahura/Nexus/Leto/dataset/ast-nn",
     batch_size=32,
     model_type="astnn",
+    probe_rank=128,
+    layer=None,
 ):
     # select the parser
     parser = Parser()
@@ -53,62 +57,13 @@ def run_probing_train(
         "test": os.path.join(dataset_path, "test.jsonl"),
     }
 
-    train_set = load_dataset("json", data_files=data_files, split="train")
-    valid_set = load_dataset("json", data_files=data_files, split="valid")
-    test_set = load_dataset("json", data_files=data_files, split="test")
+    train_set = load_dataset("json", data_files=data_files, split="train[:32]")
+    valid_set = load_dataset("json", data_files=data_files, split="valid[:32]")
+    test_set = load_dataset("json", data_files=data_files, split="test[:32]")
     #! THIS IS WHERE CODE IS CONVERTED TO AST, THEN BINARY TREE, AND THEN THE (D,C,U) TUPLE
-    train_set = train_set.map(
-        lambda e: convert_sample_to_features(e["original_string"], parser, language)
-    )
-    valid_set = valid_set.map(
-        lambda e: convert_sample_to_features(e["original_string"], parser, language)
-    )
-    test_set = test_set.map(
-        lambda e: convert_sample_to_features(e["original_string"], parser, language)
-    )
-
-    #! get class labels-ids mapping for c and u
-    labels_file_path = os.path.join(dataset_path, "labels.pkl")
-    if not os.path.exists(labels_file_path):
-        # convert each non-terminal labels to its id
-        labels_to_ids_c = get_non_terminals_labels(
-            train_set["c"], valid_set["c"], test_set["c"]
-        )
-        ids_to_labels_c = {x: y for y, x in labels_to_ids_c.items()}
-        labels_to_ids_u = get_non_terminals_labels(
-            train_set["u"], valid_set["u"], test_set["u"]
-        )
-        ids_to_labels_u = {x: y for y, x in labels_to_ids_u.items()}
-
-        with open(labels_file_path, "wb") as f:
-            pickle.dump(
-                {
-                    "labels_to_ids_c": labels_to_ids_c,
-                    "ids_to_labels_c": ids_to_labels_c,
-                    "labels_to_ids_u": labels_to_ids_u,
-                    "ids_to_labels_u": ids_to_labels_u,
-                },
-                f,
-            )
-
-        logger.info(f"Labels file did not exist. Generated and saved: {labels_file_path}")
-    else:
-        with open(labels_file_path, "rb") as f:
-            data = pickle.load(f)
-            labels_to_ids_c = data["labels_to_ids_c"]
-            ids_to_labels_c = data["ids_to_labels_c"]
-            labels_to_ids_u = data["labels_to_ids_u"]
-            ids_to_labels_u = data["ids_to_labels_u"]
-
-        logger.info(f"Loaded labels file: {labels_file_path}")
-
-    train_set = train_set.map(lambda e: convert_to_ids(e["c"], "c", labels_to_ids_c))
-    valid_set = valid_set.map(lambda e: convert_to_ids(e["c"], "c", labels_to_ids_c))
-    test_set = test_set.map(lambda e: convert_to_ids(e["c"], "c", labels_to_ids_c))
-
-    train_set = train_set.map(lambda e: convert_to_ids(e["u"], "u", labels_to_ids_u))
-    valid_set = valid_set.map(lambda e: convert_to_ids(e["u"], "u", labels_to_ids_u))
-    test_set = test_set.map(lambda e: convert_to_ids(e["u"], "u", labels_to_ids_u))
+    train_set = train_set.map(lambda e: code_to_index(e["original_string"], language))
+    valid_set = valid_set.map(lambda e: code_to_index(e["original_string"], language))
+    test_set = test_set.map(lambda e: code_to_index(e["original_string"], language))
 
     train_dataloader = DataLoader(
         dataset=train_set,
@@ -136,7 +91,7 @@ def run_probing_train(
                 "src",
                 "ast_nn",
                 "dataset",
-                'c',
+                language,
                 "embeddings",
                 "node_w2v_128",
             )
@@ -148,7 +103,7 @@ def run_probing_train(
         embeddings = np.zeros((MAX_TOKENS + 1, EMBEDDING_DIM), dtype="float32")
         embeddings[: word2vec.syn0.shape[0]] = word2vec.syn0
 
-        model = BatchProgramCC(
+        lmodel = BatchProgramCC(
             embedding_dim=word2vec.syn0.shape[1],
             hidden_dim=100,
             vocab_size=word2vec.syn0.shape[0] + 1,
@@ -157,31 +112,59 @@ def run_probing_train(
             batch_size=32,
             use_gpu=False,
             pretrained_weight=embeddings,
+            word2vec_path=os.path.join(
+                os.getcwd(),
+                "src",
+                "ast_nn",
+                "dataset",
+                language,
+                "embeddings",
+                "node_w2v_128",
+            ),
+            language=language,
         )
 
-        model.load_state_dict(
-            torch.load(
-                os.path.join(
-                    os.getcwd(), "src", "ast_nn", "trained_models", "astnn_model_c.pkl"
+        if language == "c":
+            lmodel.load_state_dict(
+                torch.load(
+                    os.path.join(
+                        os.getcwd(),
+                        "src",
+                        "ast_nn",
+                        "trained_models",
+                        "astnn_model_c.pkl",
+                    )
                 )
             )
-        )
-        logger.info("Loaded ASTNN model.")
+        elif language == "java":
+            lmodel.load_state_dict(
+                torch.load(
+                    os.path.join(
+                        os.getcwd(),
+                        "src",
+                        "ast_nn",
+                        "trained_models",
+                        "astnn_model_java_category_4.pkl",
+                    )
+                )
+            )
 
-    lmodel = lmodel.to(args.device)
+        logger.info(f"Loaded ASTNN_{language} model.")
+    device = "cpu"
+    lmodel = lmodel.to(device)
 
     probe_model = ParserProbe(
-        probe_rank=args.rank,
-        hidden_dim=args.hidden,
-        number_labels_c=len(labels_to_ids_c),
-        number_labels_u=len(labels_to_ids_u),
-    ).to(args.device)
+        probe_rank=probe_rank,
+        hidden_dim=200,
+        number_labels_c=10,
+        number_labels_u=20,
+    ).to(device)
 
-    optimizer = torch.optim.Adam(probe_model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(probe_model.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=0.1, patience=0
     )
-    criterion = ParserLoss(loss="rank")
+    criterion = ParserLoss(loss="l1")
 
     probe_model.train()
     lmodel.eval()
@@ -194,30 +177,24 @@ def run_probing_train(
         "test_f1": None,
     }
     patience_count = 0
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(1, 20 + 1):
         training_loss = 0.0
         for step, batch in enumerate(train_dataloader):
-            ds, cs, us, batch_len_tokens = batch
+            ds, cs, us, batch_len_tokens, original_code_strings = batch
             #! They feed the original code here and get the hidden states
-            embds = get_embeddings(
-                all_inputs.to(args.device),
-                all_attentions.to(args.device),
-                lmodel,
-                args.layer,
-                args.model_type,
-            )
-            embds = align_function(embds.to(args.device), alignment.to(args.device))
 
-            d_pred, scores_c, scores_u = probe_model(embds.to(args.device))
+            embds = get_embeddings(original_code_strings, "astnn", lmodel, 0)
+
+            d_pred, scores_c, scores_u = probe_model(embds.to(device))
             #! I HAVE NO IDEA HOW THE LOSS IS BEING CALCUALTED
             loss = criterion(
-                d_pred=d_pred.to(args.device),
-                scores_c=scores_c.to(args.device),
-                scores_u=scores_u.to(args.device),
-                d_real=ds.to(args.device),
-                c_real=cs.to(args.device),
-                u_real=us.to(args.device),
-                length_batch=batch_len_tokens.to(args.device),
+                d_pred=d_pred.to(device),
+                scores_c=scores_c.to(device),
+                scores_u=scores_u.to(device),
+                d_real=torch.tensor(ds).to(device),
+                c_real=torch.tensor(cs).to(device),
+                u_real=torch.tensor(us).to(device),
+                length_batch=batch_len_tokens.to(device),
             )
 
             reg = args.orthogonal_reg * (
