@@ -14,16 +14,40 @@ def get_embeddings(all_inputs, model_name, model, layer):
 
 def collator_fn(batch):
     original_code_string = [b["original_string"] for b in batch]
-    tokens = [b["code_tokens"] for b in batch]
+
     cs = [b["c"] for b in batch]
     ds = [b["d"] for b in batch]
     us = [b["u"] for b in batch]
 
-    batch_len_tokens = [len(m) for m in tokens]
-    max_len_tokens = np.max(batch_len_tokens)
+    batch_len_tokens = np.max([len(m) for m in ds])
+    max_len_c_tokens = 0
+    for children_tokens in cs:
+        for child_tokens in children_tokens:
+            max_len_c_tokens = max(max_len_c_tokens, len(child_tokens))
 
-    cs = torch.tensor([c + [-1] * (max_len_tokens - 1 - len(c)) for c in cs])
-    ds = torch.tensor([d + [-1] * (max_len_tokens - 1 - len(d)) for d in ds])
-    us = torch.tensor([u + [-1] * (max_len_tokens - len(u)) for u in us])
+    ds = [d + [-1] * (batch_len_tokens - len(d)) for d in ds]
 
-    return ds, cs, us, torch.tensor(batch_len_tokens), original_code_string
+    all_cs = []
+    for children_tokens in cs:
+        all_cs_children = []
+        for child_tokens in children_tokens:
+            new_child = child_tokens + [-1] * (max_len_c_tokens - len(child_tokens))
+            all_cs_children.append(new_child)
+        all_cs.append(
+            all_cs_children
+            + [[-1] * max_len_c_tokens] * (batch_len_tokens - len(all_cs_children))
+        )
+
+    us = [u + [-1] * (batch_len_tokens - len(u)) for u in us]
+
+    ds_tensor = torch.tensor(ds)
+    cs_tensor = torch.tensor(all_cs)
+    us_tensor = torch.tensor(us)
+    
+    return (
+        ds_tensor,
+        cs_tensor,
+        us_tensor,
+        torch.tensor(batch_len_tokens),
+        original_code_string,
+    )
