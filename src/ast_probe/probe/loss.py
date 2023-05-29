@@ -3,53 +3,42 @@ import torch.nn as nn
 
 
 class ParserLoss(nn.Module):
-    def __init__(self, loss="l1", pretrained=False):
+    def __init__(self, max_c_len, pretrained=False):
         super(ParserLoss, self).__init__()
-        self.cs = nn.CrossEntropyLoss(ignore_index=-1)
-        self.loss = loss
+        self.ds = nn.L1Loss()
+        self.cs = nn.L1Loss()
+        self.us = nn.L1Loss()
+        self.max_c_len = max_c_len
         self.pretrained = pretrained
 
-    def forward(self, d_pred, scores_c, scores_u, d_real, c_real, u_real, length_batch):
-        total_sents = torch.sum(length_batch != 0).float()
-        labels_1s = (d_real != -1).float()
-        d_pred_masked = d_pred * labels_1s  # b x seq-1
-        d_real_masked = d_real * labels_1s  # b x seq-1
-        
-        if self.loss == "l1":
-            loss_d = torch.sum(torch.abs(d_pred_masked - d_real_masked), dim=1) / (
-                length_batch.float() - 1
-            )
-            loss_d = torch.sum(loss_d) / total_sents
-        elif self.loss == "l2":
-            loss_d = torch.sum(torch.abs(d_pred_masked - d_real_masked) ** 2, dim=1) / (
-                length_batch.float() - 1
-            )
-            loss_d = torch.sum(loss_d) / total_sents
-        elif self.loss == "rank":
-            lens_d = length_batch - 1
-            max_len_d = torch.max(lens_d)
-            mask = (
-                torch.arange(max_len_d, device=max_len_d.device)[None, :]
-                < lens_d[:, None]
-            )
-            loss_d = rankloss(d_pred, d_real, mask, exp=False)
-        
-        loss_c = self.cs(scores_c.view(-1, scores_c.shape[2]), c_real.view(-1))
-        loss_u = self.cs(scores_u.view(-1, scores_u.shape[2]), u_real.view(-1))
-        
-        if self.pretrained:
-            return loss_c + loss_u
-        else:
-            return loss_c + loss_d + loss_u
+    def forward(self, d_pred, c_pred, u_pred, d_real, c_real, u_real, length_batch):
+        loss_d = self.ds(d_pred, d_real)
 
+        if c_pred.shape[2] != c_real.shape[2]:
+            num_elements = c_pred.shape[2] - c_real.shape[2]
+            fill_tensor = torch.full((c_real.size(0), c_real.size(1), num_elements), -1)
+            c_real = torch.cat((c_real, fill_tensor), dim=2)
+        loss_c = self.cs(c_pred, c_real)
 
-def rankloss(input, target, mask, exp=False):
-    diff = input[:, :, None] - input[:, None, :]
-    target_diff = ((target[:, :, None] - target[:, None, :]) > 0).float()
-    mask = mask[:, :, None] * mask[:, None, :] * target_diff
-    if exp:
-        loss = torch.exp(torch.relu(target_diff - diff)) - 1
-    else:
-        loss = torch.relu(target_diff - diff)
-    loss = (loss * mask).sum() / (mask.sum() + 1e-9)
-    return loss
+        loss_u = self.us(u_pred, u_real)
+
+        return loss_d + loss_c + loss_u
+
+    @staticmethod
+    def calculate_hits(d_pred, c_pred, u_pred, d_real, c_real, u_real, length_batch):
+        d_hits = torch.ceil(d_pred).eq(d_real).sum().item()
+        u_hits = torch.ceil(u_pred).eq(u_real).sum().item()
+
+        if c_pred.shape[2] != c_real.shape[2]:
+            num_elements = c_pred.shape[2] - c_real.shape[2]
+            fill_tensor = torch.full((c_real.size(0), c_real.size(1), num_elements), -1)
+            c_real = torch.cat((c_real, fill_tensor), dim=2)
+        c_hits = torch.ceil(c_pred).eq(c_real).sum().item()
+
+        return (
+            d_hits,
+            c_hits,
+            u_hits,
+            (length_batch * d_pred.size(1)),
+            (length_batch * c_pred.size(1) * c_pred.size(2)),
+        )
