@@ -4,7 +4,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch_scatter import scatter_mean
 
 
-def get_embeddings(all_inputs, model_name, model, layer):
+def get_embeddings(all_inputs, model_name, model):
     if model_name == "astnn":
         with torch.no_grad():
             _, embs = model.encode(all_inputs)
