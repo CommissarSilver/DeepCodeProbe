@@ -44,10 +44,15 @@ model = BatchProgramCC(
     ),
     language=language,
 )
+# model.encode(
+#     [
+#         "public String getValue(String key) {\n        KeyValue kv = getKV(key);\n        return kv == null ? null : kv.getValue();\n    }"
+#     ]
+# )
 model.encode(
     [
         "public String getValue(String key) {\n        KeyValue kv = getKV(key);\n        return kv == null ? null : kv.getValue();\n    }",
-        "protected DocPath pathString(ClassDoc cd, DocPath name) {\n        return pathString(cd.containingPackage(), name);\n    }"
+        "protected DocPath pathString(ClassDoc cd, DocPath name) {\n        return pathString(cd.containingPackage(), name);\n    }",
     ]
 )
 [
