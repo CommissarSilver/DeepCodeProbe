@@ -73,6 +73,7 @@ def ast_to_index(tree, language):
         ds = [tree_info[i]["d"] for i in range(len(tree_info))]
         cs = [tree_info[i]["c"] for i in range(len(tree_info))]
         us = [tree_info[i]["u"] for i in range(len(tree_info))]
+        
         return {"d": ds, "c": cs, "u": us}
 
     return trans2seq(tree)
