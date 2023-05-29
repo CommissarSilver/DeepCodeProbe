@@ -25,6 +25,7 @@ handlers:
     formatter: simpleFormatter
     filename: src/logs/data_trail.log
     encoding: utf-8
+  
 
 loggers:
   data_processing:
@@ -42,7 +43,7 @@ loggers:
     handlers: [consoleHandler, dataHandler, fileHandler]
     propagate: false
 
-  data:
+  probe:
     level: INFO
     handlers: [consoleHandler, dataHandler, fileHandler]
     propagate: false
