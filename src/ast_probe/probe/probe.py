@@ -3,6 +3,12 @@ import torch
 
 
 class Probe(nn.Module):
+    """
+    each probe must have a bunch of projections 
+
+    Args:
+        nn (_type_): _description_
+    """
     pass
 
 
