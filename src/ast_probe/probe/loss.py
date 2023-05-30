@@ -2,6 +2,16 @@ import torch
 import torch.nn as nn
 
 
+class LossFunc(nn.Module):
+    """each loss function should be a subclass of this class
+
+    Args:
+        nn (_type_): _description_
+    """
+
+    pass
+
+
 class ParserLoss(nn.Module):
     def __init__(self, max_c_len, pretrained=False):
         super(ParserLoss, self).__init__()
