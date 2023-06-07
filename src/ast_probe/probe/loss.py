@@ -52,3 +52,65 @@ class ParserLoss(nn.Module):
             (length_batch * d_pred.size(1)),
             (length_batch * c_pred.size(1) * c_pred.size(2)),
         )
+
+
+class ParserLossFuncGNN(nn.Module):
+    def __init__(self, max_c_len, pretrained=False):
+        super(ParserLossFuncGNN, self).__init__()
+        self.ds = nn.L1Loss()
+        self.cs = nn.L1Loss()
+        self.us = nn.L1Loss()
+        self.max_c_len = max_c_len
+        self.pretrained = pretrained
+
+    def forward(self, d_pred, c_pred, u_pred, d_real, c_real, u_real, length_batch):
+        if d_real.shape[1] != d_pred.shape[1]:
+            padding_size = d_pred.shape[1] - d_real.shape[1]
+            d_real = torch.nn.functional.pad(d_real, (0, padding_size), value=-1)
+
+        if c_pred.shape[1] != c_real.shape[1]:
+            num_elements = c_pred.shape[1] - c_real.shape[1]
+            fill_tensor = torch.full((c_real.size(0), num_elements, 2), -1)
+            c_real = torch.cat((c_real, fill_tensor), dim=1)
+
+        if u_real.shape[1] != u_pred.shape[1]:
+            padding_size = u_pred.shape[1] - u_real.shape[1]
+            u_real = torch.nn.functional.pad(u_real, (0, padding_size), value=-1)
+
+        loss_d = self.ds(d_pred, d_real)
+        loss_c = self.cs(c_pred, c_real)
+        loss_u = self.us(u_pred, u_real)
+
+        return loss_d + loss_c + loss_u
+
+    @staticmethod
+    def calculate_hits(d_pred, c_pred, u_pred, d_real, c_real, u_real, length_batch):
+        if d_real.shape[1] != d_pred.shape[1]:
+            padding_size = d_pred.shape[1] - d_real.shape[1]
+            d_real = torch.nn.functional.pad(d_real, (0, padding_size), value=-1)
+
+        if c_pred.shape[1] != c_real.shape[1]:
+            num_elements = c_pred.shape[1] - c_real.shape[1]
+            fill_tensor = torch.full((c_real.size(0), num_elements, 2), -1)
+            c_real = torch.cat((c_real, fill_tensor), dim=1)
+
+        if u_real.shape[1] != u_pred.shape[1]:
+            padding_size = u_pred.shape[1] - u_real.shape[1]
+            u_real = torch.nn.functional.pad(u_real, (0, padding_size), value=-1)
+        
+        d_hits = torch.ceil(d_pred).eq(d_real).sum().item()
+        u_hits = torch.ceil(u_pred).eq(u_real).sum().item()
+
+        if c_pred.shape[2] != c_real.shape[2]:
+            num_elements = c_pred.shape[2] - c_real.shape[2]
+            fill_tensor = torch.full((c_real.size(0), c_real.size(1), num_elements), -1)
+            c_real = torch.cat((c_real, fill_tensor), dim=2)
+        c_hits = torch.ceil(c_pred).eq(c_real).sum().item()
+
+        return (
+            d_hits,
+            c_hits,
+            u_hits,
+            (length_batch * d_pred.size(1)),
+            (length_batch * c_pred.size(1) * c_pred.size(2)),
+        )
