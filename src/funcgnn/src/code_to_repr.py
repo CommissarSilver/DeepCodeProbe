@@ -25,12 +25,16 @@ for graph_pair in graph_pairs:
     data = process_pair(graph_pair)
     global_labels = global_labels.union(set(data["labels_1"]))
     global_labels = global_labels.union(set(data["labels_2"]))
+# generate the tokens for the statements in the code. THIS COMES FROM FUNCGNN AND IS NOT MINE
 global_labels = list(global_labels)
 global_labels = {val: index for index, val in enumerate(global_labels)}
 number_of_labels = len(global_labels)
 
 
 def code_to_graph(data: dict):
+    """
+    generates the d,c,u tuple for the graph repr of the code
+    """
     new_data = dict()
 
     edges_1 = data["graph_1"] + [[y, x] for x, y in data["graph_1"]]
@@ -40,28 +44,9 @@ def code_to_graph(data: dict):
     edges_1 = torch.from_numpy(np.array(edges_1, dtype=np.int64).T).type(torch.long)
     edges_2 = torch.from_numpy(np.array(edges_2, dtype=np.int64).T).type(torch.long)
 
-    features_1, features_2 = [], []
     d = [i + 1 for i in range(len(data["labels_1"]))]
     c = data["graph_1"] + [[y, x] for x, y in data["graph_1"]]
     u = [global_labels[n] for n in data["labels_1"]]
-    # for n in data["labels_1"]:
-    #     features_1.append(
-    #         [1.0 if global_labels[n] == i else 0.0 for i in global_labels.values()]
-    #     )
-
-    # for n in data["labels_2"]:
-    #     features_2.append(
-    #         [1.0 if global_labels[n] == i else 0.0 for i in global_labels.values()]
-    #     )
-
-    # features_1 = torch.FloatTensor(np.array(features_1))
-    # features_2 = torch.FloatTensor(np.array(features_2))
-
-    # new_data["edge_index_1"] = edges_1
-    # new_data["edge_index_2"] = edges_2
-
-    # new_data["features_1"] = features_1
-    # new_data["features_2"] = features_2
 
     return {"d": d, "c": c, "u": u}
 
