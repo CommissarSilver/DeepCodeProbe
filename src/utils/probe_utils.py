@@ -1,7 +1,7 @@
 import os, logging, pickle, torch, warnings
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from ast_probe.probe.utils import collator_fn
+
 
 warnings.filterwarnings("ignore")
 
@@ -12,6 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def train_probe(
     embedding_func: callable,
+    collator_fn: callable,
     train_dataset: torch.utils.data.Dataset,
     valid_dataset: torch.utils.data.Dataset,
     batch_size: int,
@@ -75,7 +76,9 @@ def train_probe(
         ):
             ds, cs, us, batch_len_tokens, original_code_strings = batch
 
-            embds = embedding_func(original_code_strings, "astnn", model_under_probe)
+            embds = embedding_func(
+                original_code_strings, "funcgnn", model_under_probe, max_len=29
+            )
 
             d_pred, c_pred, u_pred = probe_model(embds.to(device))
 
@@ -97,6 +100,7 @@ def train_probe(
         training_loss = training_loss / len(train_dataloader)
         eval_loss, acc_d, acc_c, acc_u = eval_probe(
             embedding_func,
+            collator_fn,
             valid_dataset,
             batch_size,
             probe_model,
@@ -128,7 +132,13 @@ def train_probe(
 
 
 def eval_probe(
-    embedding_func, eval_dataset, batch_size, probe_model, probe_loss, model_under_probe
+    embedding_func,
+    collator_fn,
+    eval_dataset,
+    batch_size,
+    probe_model,
+    probe_loss,
+    model_under_probe,
 ):
     probe_model.eval()
     eval_loss = 0.0
@@ -157,7 +167,9 @@ def eval_probe(
             cs = cs.to(device)
             us = us.to(device)
 
-            embds = embedding_func(original_code_strings, "astnn", model_under_probe)
+            embds = embedding_func(
+                original_code_strings, "funcgnn", model_under_probe, max_len=29
+            )
 
             d_pred, c_pred, u_pred = probe_model(embds.to(device))
 
