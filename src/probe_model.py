@@ -179,6 +179,7 @@ elif model_name == "funcgnn":
     from funcgnn.src.funcgnn import funcGNNTrainer
     from funcgnn.src.param_parser import parameter_parser
 
+    # the data_files come from the original dataset of FungGNN
     data_files = {
         "train": [
             os.path.join(dataset_path, "train", i)
@@ -193,6 +194,7 @@ elif model_name == "funcgnn":
     train_set = load_dataset("json", data_files=data_files, split="train")
     test_set = load_dataset("json", data_files=data_files, split="test")
 
+    # calculate the d,c,u tuple for each record in the training set
     train_set = train_set.map(lambda e: code_to_index(e))
     test_set = test_set.map(lambda e: code_to_index(e))
 
@@ -208,7 +210,8 @@ elif model_name == "funcgnn":
     funcgnn_param_parser = parameter_parser()
     funcgnn_trainer = funcGNNTrainer(funcgnn_param_parser)
     model_to_probe = funcgnn_trainer.model
-    # embedding_func = get_embeddings(model_name="funcgnn", model=model_to_probe,all_inputs=)
+
+    # the embeddings of FuncGNN are of shape 64, probe_rank is still 128
     probe_model = FuncGNNParserProbe(
         probe_rank=probe_rank,
         hidden_dim=64,
