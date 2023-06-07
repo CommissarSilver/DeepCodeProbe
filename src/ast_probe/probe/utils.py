@@ -5,17 +5,44 @@ from torch_scatter import scatter_mean
 
 
 def get_embeddings_astnn(all_inputs, model_name, model, **kwargs):
+    """
+    function for getting the intermediate inputs of the ASTNN model
+
+    Args:
+        all_inputs (_type_): inputs to be fed into the model. this must be the original string of code
+        model_name (_type_): name of the model. depracated. to be removed later.
+        model (_type_): the model itself.
+
+    Returns:
+        _type_: the intermediate outputs of the model
+    """
     with torch.no_grad():
         _, embs = model.encode(all_inputs)
     return embs
 
 
 def get_embeddings_funcgnn(all_inputs, model_name, model, **kwargs):
+    """
+    function for getting the intermediate inputs of the FuncGNN model
+
+    Args:
+        all_inputs (_type_): inputs to be fed into the model. this must be the original string of code
+        model_name (_type_): name of the model. depracated. to be removed later.
+        model (_type_): the model itself.
+        kwargs (_type_): include the max_len of inputs
+
+    Returns:
+        _type_: the intermediate outputs of the model
+
+    """
     with torch.no_grad():
+        # get the intermediate ouputs of the model
         embs = [model.encode(i) for i in all_inputs]
+        # FuncGNN gives intemediate ouputs which are not a ll of the same size in their first dimension.
+        # therefore, padding is required to make them all of the same size
         max_len = kwargs["max_len"]
         padded_tensor = torch.zeros(len(embs), max_len, embs[0].size(1))
-
+        # for each tensor, if its smaller than max_len, fill it with -1s
         for i, tensor in enumerate(embs):
             padded_tensor[i, : tensor.size(0), :] = tensor
 
@@ -26,6 +53,13 @@ def get_embeddings_funcgnn(all_inputs, model_name, model, **kwargs):
 
 
 def collator_fn_astnn(batch):
+    """
+    collator function for ASTNN
+
+    Args:
+        batch (_type_): the batch of codes to be processed into d,c,u tuple
+
+    """
     original_code_string = [b["original_string"] for b in batch]
 
     cs = [b["c"] for b in batch]
@@ -33,6 +67,7 @@ def collator_fn_astnn(batch):
     us = [b["u"] for b in batch]
 
     batch_len_tokens = np.max([len(m) for m in ds])
+    
     max_len_c_tokens = 0
     for children_tokens in cs:
         for child_tokens in children_tokens:
