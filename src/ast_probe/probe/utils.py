@@ -4,15 +4,28 @@ from torch.nn.utils.rnn import pad_sequence
 from torch_scatter import scatter_mean
 
 
-def get_embeddings(all_inputs, model_name, model):
-    if model_name == "astnn":
-        with torch.no_grad():
-            _, embs = model.encode(all_inputs)
+def get_embeddings_astnn(all_inputs, model_name, model, **kwargs):
+    with torch.no_grad():
+        _, embs = model.encode(all_inputs)
+    return embs
+
+
+def get_embeddings_funcgnn(all_inputs, model_name, model, **kwargs):
+    with torch.no_grad():
+        embs = [model.encode(i) for i in all_inputs]
+        max_len = kwargs["max_len"]
+        padded_tensor = torch.zeros(len(embs), max_len, embs[0].size(1))
+
+        for i, tensor in enumerate(embs):
+            padded_tensor[i, : tensor.size(0), :] = tensor
+
+        padded_tensor[padded_tensor == 0] = -1
+        embs = padded_tensor
 
     return embs
 
 
-def collator_fn(batch):
+def collator_fn_astnn(batch):
     original_code_string = [b["original_string"] for b in batch]
 
     cs = [b["c"] for b in batch]
@@ -43,11 +56,38 @@ def collator_fn(batch):
     ds_tensor = torch.tensor(ds)
     cs_tensor = torch.tensor(all_cs)
     us_tensor = torch.tensor(us)
-    
+
     return (
         ds_tensor,
         cs_tensor,
         us_tensor,
         torch.tensor(batch_len_tokens),
         original_code_string,
+    )
+
+
+def collator_fn_funcgnn(batch):
+    cs = [b["c"] for b in batch]
+    ds = [b["d"] for b in batch]
+    us = [b["u"] for b in batch]
+
+    batch_len_tokens = np.max([len(m) for m in ds])
+    batch_len_cs = np.max([len(m) for m in cs])
+
+    ds = [d + [-1] * (batch_len_tokens - len(d)) for d in ds]
+    cs = [c + [[-1, -1]] * (batch_len_cs - len(c)) for c in cs]
+    us = [u + [-1] * (batch_len_tokens - len(u)) for u in us]
+
+    ds_tensor = torch.tensor(ds)
+    cs_tensor = torch.tensor(cs)
+    us_tensor = torch.tensor(us)
+
+    original_batch = batch
+
+    return (
+        ds_tensor,
+        cs_tensor,
+        us_tensor,
+        torch.tensor(batch_len_tokens),
+        batch,
     )
