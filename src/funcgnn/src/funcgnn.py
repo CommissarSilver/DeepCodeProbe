@@ -7,8 +7,13 @@ import numpy as np
 from tqdm import tqdm, trange
 from torch_geometric.nn import GCNConv
 from torch_geometric.nn import SAGEConv
-from layers import AttentionModule, TenorNetworkModule
-from utils import process_pair, calculate_loss, calculate_normalized_ged
+
+try:
+    from layers import AttentionModule, TenorNetworkModule
+    from utils import process_pair, calculate_loss, calculate_normalized_ged
+except ImportError:
+    from .layers import AttentionModule, TenorNetworkModule
+    from .utils import process_pair, calculate_loss, calculate_normalized_ged
 import concurrent.futures as cf
 import time
 
@@ -18,7 +23,7 @@ class funcGNN(torch.nn.Module):
     funGNN: A Graph Neural Network Approach to Program Similarity
     """
 
-    def __init__(self, args, number_of_labels):
+    def __init__(self, args, number_of_labels, global_labels):
         """
         :param args: Arguments object.
         :param number_of_labels: Number of node labels.
@@ -27,6 +32,7 @@ class funcGNN(torch.nn.Module):
         self.args = args
         self.number_labels = number_of_labels
         self.setup_layers()
+        self.global_labels = global_labels
 
     def calculate_bottleneck_features(self):
         """
@@ -126,6 +132,57 @@ class funcGNN(torch.nn.Module):
         score = torch.sigmoid(self.scoring_layer(scores))
         return score
 
+    def encode(self, data):
+        """
+        Encoding a graph.
+        :param data: Data dictionary.
+        :return features: Encoded feature matrix.
+        """
+        new_data = dict()
+        edges_1 = data["graph_1"] + [[y, x] for x, y in data["graph_1"]]
+
+        edges_2 = data["graph_2"] + [[y, x] for x, y in data["graph_2"]]
+
+        edges_1 = torch.from_numpy(np.array(edges_1, dtype=np.int64).T).type(torch.long)
+        edges_2 = torch.from_numpy(np.array(edges_2, dtype=np.int64).T).type(torch.long)
+
+        features_1, features_2 = [], []
+        for n in data["labels_1"]:
+            features_1.append(
+                [
+                    1.0 if self.global_labels[n] == i else 0.0
+                    for i in self.global_labels.values()
+                ]
+            )
+
+        for n in data["labels_2"]:
+            features_2.append(
+                [
+                    1.0 if self.global_labels[n] == i else 0.0
+                    for i in self.global_labels.values()
+                ]
+            )
+
+        features_1 = torch.FloatTensor(np.array(features_1))
+        features_2 = torch.FloatTensor(np.array(features_2))
+
+        new_data["edge_index_1"] = edges_1
+        new_data["edge_index_2"] = edges_2
+
+        new_data["features_1"] = features_1
+        new_data["features_2"] = features_2
+
+        norm_ged = data["ged"] / (0.5 * (len(data["labels_1"]) + len(data["labels_2"])))
+
+        new_data["target"] = torch.from_numpy(np.exp(-norm_ged).reshape(1, 1)).float()
+
+        edge_index = new_data["edge_index_1"]
+        features = new_data["features_1"]
+        features = self.convolutional_pass(edge_index, features)
+        # pooled_features = self.attention(features)
+
+        return features
+
 
 class funcGNNTrainer(object):
     """
@@ -144,7 +201,7 @@ class funcGNNTrainer(object):
         """
         Creating a funcGNN.
         """
-        self.model = funcGNN(self.args, self.number_of_labels)
+        self.model = funcGNN(self.args, self.number_of_labels, self.global_labels)
 
     def initial_label_enumeration(self):
         """
