@@ -178,6 +178,7 @@ class funcGNN(torch.nn.Module):
 
         edge_index = new_data["edge_index_1"]
         features = new_data["features_1"]
+        # we consider the ouput of the convolutional pass as the intermediate outputs
         features = self.convolutional_pass(edge_index, features)
         # pooled_features = self.attention(features)
 
