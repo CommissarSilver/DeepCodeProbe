@@ -2,6 +2,9 @@ import ast, re
 
 import ast
 
+u_index = {}
+u_index_counter = 0
+
 
 def extract_node_info(node, parent=None, position=0):
     """
@@ -37,7 +40,7 @@ def extract_node_info(node, parent=None, position=0):
 
 def extract_lists(ast_info):
     """
-    Extract lists D, c, and u from AST information.
+    Extract lists D, C, and U from AST information.
     """
     D = []
     C = []
@@ -62,63 +65,46 @@ def extract_lists(ast_info):
     return D, C, U
 
 
-def code_to_ast(path_to_code: str):
-    Ds = {}
-    Cs = {}
-    Us = {}
+def code_to_ast(code: str):
+    code = code.replace(" DCNL DCSP ", "\n\t")
+    code = code.replace(" DCNL  DCSP ", "\n\t")
+    code = code.replace(" DCNL ", "\n")
+    code = code.replace(" DCSP ", "\t")
 
-    codes = open(path_to_code).readlines()
+    # create the ast
+    try:
+        tree = ast.parse(code)
+        node_info = extract_node_info(tree)
+        D, C, U = extract_lists(node_info)
 
-    codes = [code.replace(" DCNL DCSP ", "\n\t") for code in codes]
-    codes = [code.replace(" DCNL  DCSP ", "\n\t") for code in codes]
-    codes = [code.replace(" DCNL ", "\n") for code in codes]
-    codes = [code.replace(" DCSP ", "\t") for code in codes]
-
-    fault_counter = 0
-    for code_index, code in enumerate(codes):
-        # create the ast
-        try:
-            tree = ast.parse(code)
-            j = extract_node_info(tree)
-            D, C, U = extract_lists(j)
-
-            Ds[code_index] = D
-            Cs[code_index] = C
-            Us[code_index] = U
-        except Exception as e:
-            fault_counter += 1
-            continue
-    print("total codes: ", len(codes))
-    print("faulty codes: ", fault_counter)
-    return Ds, Cs, Us
+        return D, C, U
+    except Exception as e:
+        pass
 
 
 def ast_to_index(
-    all_d: dict,
-    all_c: dict,
-    all_u: dict,
+    D: list,
+    C: list,
+    U: list,
 ):
-    final_d = []
-    final_c = []
-    final_u = []
-    u_index = {}
-    u_index_counter = 0
+    global u_index, u_index_counter
+    for label in U:
+        if label not in u_index.keys():
+            u_index[label] = u_index_counter
+            u_index_counter += 1
 
-    for code_index, code_ast_labels in all_u.items():
-        for label in code_ast_labels:
-            if label not in u_index.keys():
-                u_index[label] = u_index_counter
-                u_index_counter += 1
-    for d, c, u in zip(all_d.values(), all_c.values(), all_u.values()):
-        final_d.append(d)
-        final_c.append(c)
-        final_u.append([u_index[label] for label in u])
+    final_d = D
+    final_c = C
+    final_u = [u_index[label] for label in U]
 
-    return final_d, final_c, final_u, u_index
+    return final_d, final_c, final_u
 
 
 if __name__ == "__main__":
-    ds, cs, us = code_to_ast(
+    path_to_code = (
         "/Users/ahura/Nexus/Leto/src/code_sum_drl/dataset/train/train0.60.20.2.code"
     )
-    s = ast_to_index(ds, cs, us)
+    codes = open(path_to_code).readlines()
+    for code in codes:
+        ds, cs, us = code_to_ast(code)
+        ds, cs, us = ast_to_index(ds, cs, us)
