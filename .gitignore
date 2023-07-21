@@ -7,3 +7,7 @@ grammars
 trained_models
 embeddings
 outputFiles
+src/summarization_tf/dataset
+src/summarization_tf/parser
+/Users/ahura/Nexus/Leto/runs
+runs/
