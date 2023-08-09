@@ -57,6 +57,11 @@ def code_to_index(data: dict):
 
 if __name__ == "__main__":
     j = code_to_index(
-        "/Users/ahura/Nexus/Leto/src/funcgnn/dataset/test/addTwoArrays_DC_EQ_m3::::addTwoArrays_L_EQ_m4.json"
+        json.loads(
+            open(
+                "/Users/ahura/Nexus/Leto/src/funcgnn/dataset/test/addTwoArrays_DC_EQ_m3::::addTwoArrays_L_EQ_m4.json"
+            ).read()
+        )
     )
+
     print(j)

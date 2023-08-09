@@ -100,11 +100,18 @@ def ast_to_index(
     return final_d, final_c, final_u
 
 
+def code_to_index(code: str):
+    D, C, U = code_to_ast(code)
+    D, C, U = ast_to_index(D, C, U)
+    return {"d": D, "c": C, "u": U}
+
+
 if __name__ == "__main__":
     path_to_code = (
         "/Users/ahura/Nexus/Leto/src/code_sum_drl/dataset/train/train0.60.20.2.code"
     )
     codes = open(path_to_code).readlines()
     for code in codes:
-        ds, cs, us = code_to_ast(code)
-        ds, cs, us = ast_to_index(ds, cs, us)
+        # ds, cs, us = code_to_ast(code)
+        # ds, cs, us = ast_to_index(ds, cs, us)
+        test = code_to_index(code)

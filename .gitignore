@@ -13,3 +13,4 @@ src/summarization_tf/dataset
 src/summarization_tf/parser
 /Users/ahura/Nexus/Leto/runs
 runs/
+src/summarization_tf/checkpoints/*
