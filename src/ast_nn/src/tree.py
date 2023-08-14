@@ -66,7 +66,6 @@ class ASTNode(object):
         else:
             return [ASTNode(child) for _, child in children]
 
-
 class BlockNode(object):
     def __init__(self, node):
         self.node = node
