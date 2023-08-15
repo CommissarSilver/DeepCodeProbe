@@ -116,10 +116,22 @@ if __name__ == "__main__":
                 loss = loss_function(output, Variable(train_labels))
                 loss.backward()
                 optimizer.step()
-                
+
                 if i % 50 == 0:
                     print(f"Epoch {epoch} - {i}: loss = {loss.item()}")
-        
+        # save the model
+        if not os.path.exists(os.path.join(os.getcwd(), "src", "ast_nn", "models")):
+            os.mkdir(os.path.join(os.getcwd(), "src", "ast_nn", "models"))
+        torch.save(
+            model.state_dict(),
+            os.path.join(
+                os.getcwd(),
+                "src",
+                "ast_nn",
+                "models",
+                "astnn_" + str.upper(lang) + "_" + str(t) + ".pkl",
+            ),
+        )
         print("Testing-%d..." % t)
         # testing procedure
         predicts = []
