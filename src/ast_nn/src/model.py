@@ -57,7 +57,7 @@ class BatchTreeEncoder(nn.Module):
             temp = node[i][1:]
             c_num = len(temp)
             for j in range(c_num):
-                if temp[j][0] is not -1:
+                if temp[j][0] != -1:
                     if len(children_index) <= j:
                         children_index.append([i])
                         children.append([temp[j]])
@@ -146,9 +146,10 @@ class BatchProgramCC(nn.Module):
         self.hidden = self.init_hidden()
         self.dropout = nn.Dropout(0.2)
 
+        # This is added by me to have the model remeber its embeddings when it used for probing
         word2vec = Word2Vec.load(word2vec_path).wv
-        self.vocab = word2vec.vocab
-        self.max_token = word2vec.syn0.shape[0]
+        self.vocab = word2vec
+        self.max_token = word2vec.vectors.shape[0]
         self.lang = language
 
     def process_input(self, input_batch):
@@ -234,7 +235,7 @@ class BatchProgramCC(nn.Module):
         return zeros
 
     def encode(self, x):
-        x = self.process_input(x)
+        # x = self.process_input(x)
 
         lens = [len(item) for item in x]
         max_len = max(lens)
@@ -276,7 +277,7 @@ class BatchProgramCC(nn.Module):
         return gru_out, gru_out_hidden
 
     def forward(self, x1, x2):
-        lvec, rvec = self.encode(x1), self.encode(x2)
+        lvec, rvec = self.encode(x1)[0], self.encode(x2)[0]
 
         abs_dist = torch.abs(torch.add(lvec, -rvec))
 
