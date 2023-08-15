@@ -257,10 +257,11 @@ class BatchProgramCC(nn.Module):
         encodes = torch.cat(seq)
         encodes = encodes.view(self.batch_size, max_len, -1)
         # since enforce_sorted is not supported in this pytorch version, we need to do it manually
-        lens, sorted_indices = torch.sort(torch.tensor(lens), descending=True)
-        encodes = torch.index_select(encodes, dim=0, index=sorted_indices)
+        lengths, perm_idx = torch.LongTensor(lens).sort(0, descending=True)
+        encodes = encodes[perm_idx]
+        _, unperm_idx = perm_idx.sort(0, descending=False)
 
-        encodes = nn.utils.rnn.pack_padded_sequence(encodes, torch.LongTensor(lens), True)
+        encodes = nn.utils.rnn.pack_padded_sequence(encodes, lengths, True)
 
         # return encodes
 
@@ -268,10 +269,10 @@ class BatchProgramCC(nn.Module):
         gru_out_hidden, _ = nn.utils.rnn.pad_packed_sequence(
             gru_out, batch_first=True, padding_value=-1e9
         )
-
-        gru_out = torch.transpose(gru_out_hidden, 1, 2)
+        gru_out_hidden = gru_out_hidden[unperm_idx]
+        gru_out_hidden = torch.transpose(gru_out_hidden, 1, 2)
         # pooling
-        gru_out = F.max_pool1d(gru_out, gru_out.size(2)).squeeze(2)
+        gru_out = F.max_pool1d(gru_out_hidden, gru_out_hidden.size(2)).squeeze(2)
         # gru_out = gru_out[:,-1]
 
         return gru_out, gru_out_hidden
