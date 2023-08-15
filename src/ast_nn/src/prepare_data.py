@@ -27,7 +27,7 @@ def get_blocks(node, block_seq):
     name = node.__class__.__name__
     if name in ["FuncDef", "If", "For", "While", "DoWhile"]:
         block_seq.append(ASTNode(node))
-        if name is not "For":
+        if name != "For":
             skip = 1
         else:
             skip = len(children) - 1
@@ -44,7 +44,7 @@ def get_blocks(node, block_seq):
             ]:
                 block_seq.append(ASTNode(child))
             get_blocks(child, block_seq)
-    elif name is "Compound":
+    elif name == "Compound":
         block_seq.append(ASTNode(name))
         for _, child in node.children():
             if child.__class__.__name__ not in ["If", "For", "While", "DoWhile"]:
@@ -63,15 +63,22 @@ def generate_block_seqs(self):
         from utils import get_blocks_v1 as func
     from gensim.models.word2vec import Word2Vec
 
+    # load the word2ved embedding
     word2vec = Word2Vec.load(
-        self.root + "/" + self.language + "/train/embedding/node_w2v_" + str(self.size)
+        os.path.join(
+            self.root,
+            self.language,
+            "train",
+            "embedding",
+            "node_w2v_" + str(self.size),
+        )
     ).wv
-    vocab = word2vec.vocab
-    max_token = word2vec.syn0.shape[0]
+    vocab = word2vec
+    max_token = word2vec.vectors.shape[0]
 
     def tree_to_index(node):
         token = node.token
-        result = [vocab[token].index if token in vocab else max_token]
+        result = [vocab.key_to_index[token] if token in vocab else max_token]
         children = node.children
         for child in children:
             result.append(tree_to_index(child))
