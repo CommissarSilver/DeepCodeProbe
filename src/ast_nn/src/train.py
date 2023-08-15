@@ -1,5 +1,6 @@
 import pandas as pd
 import torch
+import os
 import time
 import numpy as np
 import warnings
@@ -30,27 +31,33 @@ if __name__ == "__main__":
     if not args.lang:
         print("No specified dataset")
         exit(1)
-    root = "data/"
+    root = os.path.join(os.getcwd(), "src", "ast_nn", "dataset")
     lang = args.lang
     categories = 1
     if lang == "java":
         categories = 5
     print("Train for ", str.upper(lang))
-    train_data = pd.read_pickle(root + lang + "/train/blocks.pkl").sample(frac=1)
-    test_data = pd.read_pickle(root + lang + "/test/blocks.pkl").sample(frac=1)
+    train_data = pd.read_pickle(os.path.join(root, lang, "train", "blocks.pkl")).sample(
+        frac=1
+    )
+    test_data = pd.read_pickle(os.path.join(root, lang, "test", "blocks.pkl")).sample(
+        frac=1
+    )
 
-    word2vec = Word2Vec.load(root + lang + "/train/embedding/node_w2v_128").wv
-    MAX_TOKENS = word2vec.syn0.shape[0]
-    EMBEDDING_DIM = word2vec.syn0.shape[1]
+    # word2vec = Word2Vec.load(root + lang + "/train/embedding/node_w2v_128").wv
+    word2vec = Word2Vec.load(os.path.join(root, lang, "embeddings", "node_w2v_128")).wv
+
+    MAX_TOKENS = word2vec.vectors.shape[0]
+    EMBEDDING_DIM = word2vec.vectors.shape[1]
     embeddings = np.zeros((MAX_TOKENS + 1, EMBEDDING_DIM), dtype="float32")
-    embeddings[: word2vec.syn0.shape[0]] = word2vec.syn0
+    embeddings[: word2vec.vectors.shape[0]] = word2vec.vectors
 
     HIDDEN_DIM = 100
     ENCODE_DIM = 128
     LABELS = 1
     EPOCHS = 5
     BATCH_SIZE = 32
-    USE_GPU = True
+    USE_GPU = False
 
     model = BatchProgramCC(
         EMBEDDING_DIM,
@@ -61,6 +68,7 @@ if __name__ == "__main__":
         BATCH_SIZE,
         USE_GPU,
         embeddings,
+        word2vec_path=os.path.join(root, lang, "embeddings", "node_w2v_128"),
     )
     if USE_GPU:
         model.cuda()
@@ -108,6 +116,10 @@ if __name__ == "__main__":
                 loss = loss_function(output, Variable(train_labels))
                 loss.backward()
                 optimizer.step()
+                
+                if i % 50 == 0:
+                    print(f"Epoch {epoch} - {i}: loss = {loss.item()}")
+        
         print("Testing-%d..." % t)
         # testing procedure
         predicts = []
