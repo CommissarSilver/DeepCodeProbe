@@ -101,7 +101,7 @@ class Pipeline:
         """
         Split data into train, dev and test sets
         """
-        data_path = os.path.join(self.root, self.language, "/")
+        data_path = os.path.join(self.root, self.language)
         data = self.pairs
         data_num = len(data)  # number of paris
         ratios = [
@@ -119,17 +119,17 @@ class Pipeline:
             if not os.path.exists(path):
                 os.mkdir(path)
 
-        train_path = os.path.join(data_path, "train/")
+        train_path = os.path.join(data_path, "train")
         check_or_create(train_path)
         self.train_file_path = os.path.join(train_path, "train_.pkl")
         train.to_pickle(self.train_file_path)
 
-        dev_path = os.path.join(data_path, "dev/")
+        dev_path = os.path.join(data_path, "dev")
         check_or_create(dev_path)
         self.dev_file_path = os.path.join(dev_path, "dev_.pkl")
         dev.to_pickle(self.dev_file_path)
 
-        test_path = os.path.join(data_path, "test/")
+        test_path = os.path.join(data_path, "test")
         check_or_create(test_path)
         self.test_file_path = os.path.join(test_path, "test_.pkl")
         test.to_pickle(self.test_file_path)
@@ -146,20 +146,20 @@ class Pipeline:
             size (int): size of the word2vec model
         """
         self.size = size
-        data_path = os.path.join(self.root, self.language, "/")
+        data_path = os.path.join(self.root, self.language)
 
         if not input_file_path:
             input_file_path = self.train_file_path
 
         pairs = pd.read_pickle(input_file_path)
-        train_ids = pairs["id1"].append(pairs["id2"]).unique()
+        train_ids = pairs["id1"]._append(pairs["id2"]).unique()
 
         #! there are some problems with the java dataset, we need to drop the ones that haveot been processed in the proceeding steps
         trees = self.sources.set_index("id").reindex(train_ids).dropna()
         # trees = self.sources.set_index("id", drop=True).loc[train_ids]
 
         if not os.path.exists(os.path.join(data_path, "embeddings")):
-            os.mkdir(data_path + "embeddings")
+            os.mkdir(os.path.join(data_path, "embeddings"))
 
         if self.language == "c":
             sys.path.append("../")
@@ -180,9 +180,11 @@ class Pipeline:
         from gensim.models.word2vec import Word2Vec
 
         try:
-            w2v = Word2Vec(corpus, size=size, workers=16, sg=1, max_final_vocab=3000)
+            w2v = Word2Vec(
+                corpus, vector_size=size, workers=16, sg=1, max_final_vocab=3000
+            )
             logger.info("Finished training word2vec model")
-            w2v.save(data_path + "embeddings/node_w2v_" + str(size))
+            w2v.save(os.path.join(data_path, "embeddings", "node_w2v_" + str(size)))
         except Exception as e:
             logger.exception("There was a problem in training the word2vec model: %s", e)
             raise e
@@ -200,17 +202,25 @@ class Pipeline:
         from gensim.models.word2vec import Word2Vec
 
         word2vec = Word2Vec.load(
-            self.root + "/" + self.language + "/embeddings/node_w2v_" + str(self.size)
+            os.path.join(
+                self.root,
+                self.language,
+                "embeddings",
+                "node_w2v_" + str(self.size),
+            )
         ).wv
-        vocab = word2vec.vocab
-        max_token = word2vec.syn0.shape[0]
+        vocab = word2vec
+        max_token = word2vec.vectors.shape[0]
+        print("max_token", max_token)
 
         def tree_to_index(node):
             token = node.token
-            result = [vocab[token].index if token in vocab else max_token]
+            result = [vocab.key_to_index[token] if token in vocab else max_token]
             children = node.children
+
             for child in children:
                 result.append(tree_to_index(child))
+
             return result
 
         def trans2seq(r):
@@ -241,7 +251,7 @@ class Pipeline:
         df.drop(["id_x", "id_y"], axis=1, inplace=True)
         df.dropna(inplace=True)
 
-        df.to_pickle(self.root + "/" + self.language + "/" + part + "/blocks.pkl")
+        df.to_pickle(os.path.join(self.root, self.language, part, "blocks.pkl"))
         logger.info("Finished merging pairs")
 
     # run for processing data to train
@@ -290,8 +300,8 @@ def process_input(input: str, lang: str, word2vec_path: str):
     # load appropriate word2vec model
     try:
         word2vec = Word2Vec.load(word2vec_path).wv
-        vocab = word2vec.vocab
-        max_token = word2vec.syn0.shape[0]
+        vocab = word2vec
+        max_token = word2vec.vectors.shape[0]
     except Exception as e:
         logger.exception("There was a problem in loading the word2vec model: %s", e)
         raise e
@@ -299,7 +309,7 @@ def process_input(input: str, lang: str, word2vec_path: str):
     # convert AST to index representation
     def tree_to_index(node):
         token = node.token
-        result = [vocab[token].index if token in vocab else max_token]
+        result = [vocab.key_to_index[token] if token in vocab else max_token]
         children = node.children
         for child in children:
             result.append(tree_to_index(child))
@@ -332,10 +342,10 @@ def main(lang):
 
 
 if __name__ == "__main__":
-    # main("java")
-    j = process_input(
-        'public class Test { public static void main(String[] args) { System.out.println("Hello World!"); } }',
-        "java",
-        "src/ast_nn/dataset/java/embeddings/node_w2v_128",
-    )
-    print("hi")
+    main("c")
+    # j = process_input(
+    #     'public class Test { public static void main(String[] args) { System.out.println("Hello World!"); } }',
+    #     "java",
+    #     "src/ast_nn/dataset/java/embeddings/node_w2v_128",
+    # )
+    # print("hi")
