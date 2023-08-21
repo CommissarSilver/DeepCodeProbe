@@ -32,7 +32,10 @@ def parameter_parser():
     )
 
     parser.add_argument(
-        "--epochs", type=int, default=10, help="Number of training epochs. Default is 10."
+        "--epochs",
+        type=int,
+        default=100,
+        help="Number of training epochs. Default is 10.",
     )
 
     parser.add_argument(
@@ -78,7 +81,7 @@ def parameter_parser():
     )
 
     parser.add_argument(
-        "--bins", type=int, default=16, help="Similarity score bins. Default is 16."
+        "--bins", type=int, default=32, help="Similarity score bins. Default is 16."
     )
 
     parser.add_argument(

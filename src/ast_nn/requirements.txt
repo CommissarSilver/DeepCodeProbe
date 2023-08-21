@@ -1,3 +1,4 @@
+# Python 3.10.12
 gensim==4.3.1
 javalang==0.13.0
 networkx==3.1
