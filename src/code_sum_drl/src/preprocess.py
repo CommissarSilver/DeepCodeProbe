@@ -13,61 +13,62 @@ import gensim
 
 # from .Dict import Dict
 def get_opt():
+    Working_path = "/Users/ahura/Nexus/Leto/src/code_sum_drl"
     parser = argparse.ArgumentParser(description="preprocess.py")
     parser.add_argument("-data_name", default="github-python", help="Data name")
     parser.add_argument(
         "-train_src",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/train0.60.20.2.code",
+        default=f"{Working_path}/dataset/train/train0.60.20.2.code",
         help="Path to the training source data",
     )
     parser.add_argument(
         "-train_tgt",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/train0.60.20.2.comment",
+        default=f"{Working_path}/dataset/train/train0.60.20.2.comment",
         help="Path to the training target data",
     )
     parser.add_argument(
         "-train_xe_src",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/train0.60.20.2.code",
+        default=f"{Working_path}/dataset/train/train0.60.20.2.code",
         help="Path to the pre-training source data",
     )
     parser.add_argument(
         "-train_xe_tgt",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/train0.60.20.2.comment",
+        default=f"{Working_path}/dataset/train/train0.60.20.2.comment",
         help="Path to the pre-training target data",
     )
     parser.add_argument(
         "-train_pg_src",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/train0.60.20.2.code",
+        default=f"{Working_path}/dataset/train/train0.60.20.2.code",
         help="Path to the bandit training source data",
     )
     parser.add_argument(
         "-train_pg_tgt",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/train0.60.20.2.comment",
+        default=f"{Working_path}/dataset/train/train0.60.20.2.comment",
         help="Path to the bandit training target data",
     )
     parser.add_argument(
         "-valid_src",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/dev0.60.20.2.code",
+        default=f"{Working_path}/dataset/train/dev0.60.20.2.code",
         help="Path to the validation source data",
     )
     parser.add_argument(
         "-valid_tgt",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/dev0.60.20.2.comment",
+        default=f"{Working_path}/dataset/train/dev0.60.20.2.comment",
         help="Path to the validation target data",
     )
     parser.add_argument(
         "-test_src",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/test0.60.20.2.code",
+        default=f"{Working_path}/dataset/train/test0.60.20.2.code",
         help="Path to the test source data",
     )
     parser.add_argument(
         "-test_tgt",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/test0.60.20.2.comment",
+        default=f"{Working_path}/dataset/train/test0.60.20.2.comment",
         help="Path to the test target data",
     )
     parser.add_argument(
         "-save_data",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/processed_all",
+        default=f"{Working_path}/dataset/train/processed_all",
         help="Output file for the prepared data",
     )
     parser.add_argument(
@@ -179,8 +180,9 @@ def makeData(which, srcFile, tgtFile, srcDicts, tgtDicts):
                 print("Exception: ", e)
                 print(sline)
                 exceps += 1
+
         else:
-            print("Too long")
+            print(ignored)
             ignored += 1
 
     srcF.close()
@@ -244,16 +246,16 @@ def main():
 
     print('Saving data to "' + opt.save_data + '.train.pt"...')
     torch.save(save_data, opt.save_data + ".train.pt")
-
+    torch.load(opt.save_data + ".train.pt")
     # word2vec dump
     print("code_sentences: ", train_xe_code_sentences[0])
     print("comment_sentences: ", train_xe_comment_sentences[0])
     code_w2v_model = gensim.models.Word2Vec(
-        train_xe_code_sentences, size=512, window=5, min_count=5, workers=16
+        train_xe_code_sentences, vector_size=512, window=5, min_count=5, workers=16
     )
     code_w2v_model.save(opt.save_data + ".train_xe.code.gz")
     comment_w2v_model = gensim.models.Word2Vec(
-        train_xe_comment_sentences, size=512, window=5, min_count=5, workers=16
+        train_xe_comment_sentences, vector_size=512, window=5, min_count=5, workers=16
     )
     comment_w2v_model.save(opt.save_data + ".train_xe.comment.gz")
 
