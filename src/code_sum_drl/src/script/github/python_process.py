@@ -8,7 +8,7 @@ import util
 import glob
 import argparse
 
-data_dir = "/store/travail/vamaj/code_summarization_public/dataset/"
+data_dir = "/Users/ahura/Nexus/Leto/src/code_sum_drl/dataset/"
 original_path = data_dir + "original/"
 processed_path = data_dir + "processed/"
 train_path = data_dir + "train/"
@@ -68,10 +68,12 @@ def generate_pairs():
     with open(processed_path + "all.code", "w") as code_file:
         with open(processed_path + "all.comment", "w") as comment_file:
             with open(
-                original_path + "data_ps.declbodies", "r",
+                original_path + "data_ps.declbodies",
+                "r",
             ) as declbodies_file:
                 with open(
-                    original_path + "data_ps.descriptions", "r",
+                    original_path + "data_ps.descriptions",
+                    "r",
                 ) as descriptions_file:
                     declbodies_lines = declbodies_file.readlines()
                     descriptions_lines = descriptions_file.readlines()
