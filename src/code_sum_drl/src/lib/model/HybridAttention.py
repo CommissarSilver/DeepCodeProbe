@@ -2,14 +2,15 @@ import torch
 import torch.nn as nn
 import math
 
-_INF = float('inf')
+_INF = float("inf")
+
 
 class HybridAttention(nn.Module):
     def __init__(self, dim):
         super(HybridAttention, self).__init__()
         self.linear_in = nn.Linear(dim, dim, bias=False)
-        self.sm = nn.Softmax()
-        self.linear_out = nn.Linear(dim*4, dim, bias=False)
+        self.sm = nn.Softmax(dim=-1)
+        self.linear_out = nn.Linear(dim * 4, dim, bias=False)
         self.tanh = nn.Tanh()
         self.mask_tree = None
         self.mask_txt = None
@@ -35,10 +36,16 @@ class HybridAttention(nn.Module):
             attn_txt.data.masked_fill_(self.mask_txt, -_INF)
             attn_txt = self.sm(attn_txt)
 
-        attn3_tree = attn_tree.view(attn_tree.size(0), 1, attn_tree.size(1))  # batch x 1 x sourceL
-        attn3_txt = attn_txt.view(attn_txt.size(0), 1, attn_txt.size(1))  # batch x 1 x sourceL
+        attn3_tree = attn_tree.view(
+            attn_tree.size(0), 1, attn_tree.size(1)
+        )  # batch x 1 x sourceL
+        attn3_txt = attn_txt.view(
+            attn_txt.size(0), 1, attn_txt.size(1)
+        )  # batch x 1 x sourceL
 
-        weightedContext_tree = torch.bmm(attn3_tree, context_tree).squeeze(1)  # batch x dim
+        weightedContext_tree = torch.bmm(attn3_tree, context_tree).squeeze(
+            1
+        )  # batch x dim
         contextCombined_tree = torch.cat((weightedContext_tree, inputs_tree), 1)
 
         weightedContext_txt = torch.bmm(attn3_txt, context_txt).squeeze(1)  # batch x dim
