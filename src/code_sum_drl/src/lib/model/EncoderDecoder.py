@@ -10,6 +10,7 @@ import lib
 import sys
 import re
 
+
 class Encoder_W2V(nn.Module):
     def __init__(self, opt, dicts):
         self.layers = opt.layers
@@ -19,9 +20,17 @@ class Encoder_W2V(nn.Module):
 
         super(Encoder_W2V, self).__init__()
         # self.word_lut = nn.Embedding(dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD)
-        self.embeddings = gensim.models.Word2Vec.load(opt.embedding_w2v + 'processed_all.train_xe.code.gz')
+        self.embeddings = gensim.models.Word2Vec.load(
+            opt.embedding_w2v + "processed_all.train_xe.code.gz"
+        )
 
-        self.rnn = nn.LSTM(opt.word_vec_size, self.hidden_size,  num_layers=opt.layers, dropout=opt.dropout, bidirectional=opt.brnn)
+        self.rnn = nn.LSTM(
+            opt.word_vec_size,
+            self.hidden_size,
+            num_layers=opt.layers,
+            dropout=opt.dropout,
+            bidirectional=opt.brnn,
+        )
         self.dicts = dicts
         self.opt = opt
 
@@ -29,7 +38,9 @@ class Encoder_W2V(nn.Module):
         emb = []
         for i in range(input.shape[0]):
             emb_row = []
-            for w in self.dicts.convertToLabels(input[i].tolist(), lib.Constants.UNK_WORD):
+            for w in self.dicts.convertToLabels(
+                input[i].tolist(), lib.Constants.UNK_WORD
+            ):
                 try:
                     emb_row.append(self.embeddings.wv[w].astype(float))
                 except:
@@ -50,26 +61,36 @@ class Encoder_W2V(nn.Module):
         outputs = unpack(outputs)[0]
         return hidden_t, outputs
 
+
 class Encoder(nn.Module):
     def __init__(self, opt, dicts):
+        super(Encoder, self).__init__()
         self.layers = opt.layers
         self.num_directions = 2 if opt.brnn else 1
         assert opt.rnn_size % self.num_directions == 0
         self.hidden_size = opt.rnn_size // self.num_directions
 
-        super(Encoder, self).__init__()
-        self.word_lut = nn.Embedding(dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD)
+        self.word_lut = nn.Embedding(
+            dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD
+        )
 
-        self.rnn = nn.LSTM(opt.word_vec_size, self.hidden_size,  num_layers=opt.layers, dropout=opt.dropout, bidirectional=opt.brnn)
+        self.rnn = nn.LSTM(
+            opt.word_vec_size,
+            self.hidden_size,
+            num_layers=opt.layers,
+            dropout=opt.dropout,
+            bidirectional=opt.brnn,
+        )
         self.dicts = dicts
         self.opt = opt
 
     def forward(self, inputs, hidden=None):
-        emb = pack(self.word_lut(inputs[0]), inputs[1])
+        emb = pack(self.word_lut(inputs[0]), inputs[1], enforce_sorted=False)
 
         outputs, hidden_t = self.rnn(emb, hidden)
-        outputs = unpack(outputs)[0]
+        outputs, _ = unpack(outputs)
         return hidden_t, outputs
+
 
 class StackedLSTM(nn.Module):
     def __init__(self, num_layers, input_size, rnn_size, dropout):
@@ -98,6 +119,7 @@ class StackedLSTM(nn.Module):
 
         return inputs, (h_1, c_1)
 
+
 class BinaryTreeLeafModule(nn.Module):
     def __init__(self, cuda, in_dim, mem_dim):
         super(BinaryTreeLeafModule, self).__init__()
@@ -108,14 +130,15 @@ class BinaryTreeLeafModule(nn.Module):
         self.cx = nn.Linear(self.in_dim, self.mem_dim)
         self.ox = nn.Linear(self.in_dim, self.mem_dim)
         if self.cudaFlag:
-            self.cx = self.cx.cuda()
-            self.ox = self.ox.cuda()
+            self.cx = self.cx.to("cuda")
+            self.ox = self.ox.to("cuda")
 
     def forward(self, input):
         c = self.cx(input)
-        o = F.sigmoid(self.ox(input))
-        h = o * F.tanh(c)
+        o = torch.sigmoid(self.ox(input))
+        h = o * torch.tanh(c)
         return h, (c, h)
+
 
 class BinaryTreeComposer(nn.Module):
     def __init__(self, cuda, in_dim, mem_dim, gate_output=False):
@@ -124,6 +147,7 @@ class BinaryTreeComposer(nn.Module):
         self.in_dim = in_dim
         self.mem_dim = mem_dim
         self.gate_output = gate_output
+
         def new_gate():
             lh = nn.Linear(self.mem_dim, self.mem_dim)
             rh = nn.Linear(self.mem_dim, self.mem_dim)
@@ -133,34 +157,41 @@ class BinaryTreeComposer(nn.Module):
         self.lflh, self.lfrh = new_gate()
         self.rflh, self.rfrh = new_gate()
         self.ulh, self.urh = new_gate()
-        if self.cudaFlag:
-            self.ilh = self.ilh.cuda()
-            self.irh = self.irh.cuda()
-            self.lflh = self.lflh.cuda()
-            self.lfrh = self.lfrh.cuda()
-            self.rflh = self.rflh.cuda()
-            self.rfrh = self.rfrh.cuda()
-            self.ulh = self.ulh.cuda()
-            self.urh = self.urh.cuda()
+        self.cuda_if_needed()
 
         if self.gate_output:
             self.olh, self.orh = new_gate()
-            if self.cudaFlag:
-                self.olh = self.olh.cuda()
-                self.orh = self.orh.cuda()
+            self.cuda_if_needed(gate_output_only=True)
 
-    def forward(self, lc, lh , rc, rh):
-        i = F.sigmoid(self.ilh(lh) + self.irh(rh))
-        lf = F.sigmoid(self.lflh(lh) + self.lfrh(rh))
-        rf = F.sigmoid(self.rflh(lh) + self.rfrh(rh))
-        update = F.tanh(self.ulh(lh) + self.urh(rh))
-        c =  i* update + lf*lc + rf*rc
+    def forward(self, lc, lh, rc, rh):
+        i = torch.sigmoid(self.ilh(lh) + self.irh(rh))
+        lf = torch.sigmoid(self.lflh(lh) + self.lfrh(rh))
+        rf = torch.sigmoid(self.rflh(lh) + self.rfrh(rh))
+        update = torch.tanh(self.ulh(lh) + self.urh(rh))
+        c = i * update + lf * lc + rf * rc
         if self.gate_output:
-            o = F.sigmoid(self.olh(lh) + self.orh(rh))
-            h = o*F.tanh(c)
+            o = torch.sigmoid(self.olh(lh) + self.orh(rh))
+            h = o * torch.tanh(c)
         else:
-            h = F.tanh(c)
+            h = torch.tanh(c)
         return c, h
+
+    def cuda_if_needed(self, gate_output_only=False):
+        if gate_output_only and not self.gate_output:
+            return
+        if self.cudaFlag:
+            self.ilh = self.ilh.to("cuda")
+            self.irh = self.irh.to("cuda")
+            self.lflh = self.lflh.to("cuda")
+            self.lfrh = self.lfrh.to("cuda")
+            self.rflh = self.rflh.to("cuda")
+            self.rfrh = self.rfrh.to("cuda")
+            self.ulh = self.ulh.to("cuda")
+            self.urh = self.urh.to("cuda")
+        if self.gate_output:
+            self.olh = self.olh.to("cuda")
+            self.orh = self.orh.to("cuda")
+
 
 class TreeEncoder_W2V(nn.Module):
     def __init__(self, opt, dicts):
@@ -171,17 +202,23 @@ class TreeEncoder_W2V(nn.Module):
         self.num_directions = 2 if opt.brnn else 1
         assert opt.rnn_size % self.num_directions == 0
         self.hidden_size = opt.rnn_size // self.num_directions
-        self.embeddings = gensim.models.Word2Vec.load(opt.embedding_w2v + 'processed_all.train_xe.code.gz')
+        self.embeddings = gensim.models.Word2Vec.load(
+            opt.embedding_w2v + "processed_all.train_xe.code.gz"
+        )
         # self.embeddings = Embeddings(opt, dicts)
-        self.input_size = self.opt.word_vec_size #self.embeddings.embedding_size #100
+        self.input_size = self.opt.word_vec_size  # self.embeddings.embedding_size #100
 
         if len(self.opt.gpus) >= 1:
             self.cudaFlag = True
         else:
             self.cudaFlag = False
 
-        self.leaf_module = BinaryTreeLeafModule(self.cudaFlag, self.input_size, self.hidden_size)
-        self.composer = BinaryTreeComposer(self.cudaFlag, self.input_size, self.hidden_size)
+        self.leaf_module = BinaryTreeLeafModule(
+            self.cudaFlag, self.input_size, self.hidden_size
+        )
+        self.composer = BinaryTreeComposer(
+            self.cudaFlag, self.input_size, self.hidden_size
+        )
 
     def forward(self, tree, lengths):
         if not tree.children:
@@ -212,7 +249,15 @@ class TreeEncoder_W2V(nn.Module):
                 output.data.unsqueeze_(1)
                 supl = max_length - output.size()[0]
                 if supl > 0:
-                    output.data = torch.cat([output.data, torch.zeros((supl, output.size()[1], output.size()[2])).cuda()], 0)
+                    output.data = torch.cat(
+                        [
+                            output.data,
+                            torch.zeros(
+                                (supl, output.size()[1], output.size()[2])
+                            ).cuda(),
+                        ],
+                        0,
+                    )
 
                 state[0].data.unsqueeze_(1)
                 state[1].data.unsqueeze_(1)
@@ -225,6 +270,7 @@ class TreeEncoder_W2V(nn.Module):
     #     ro = tree.children[1].output
     #     return lc, lh, lo, rc, rh, ro
 
+
 class TreeEncoder(nn.Module):
     def __init__(self, opt, dicts):
         super(TreeEncoder, self).__init__()
@@ -234,29 +280,29 @@ class TreeEncoder(nn.Module):
         self.num_directions = 2 if opt.brnn else 1
         assert opt.rnn_size % self.num_directions == 0
         self.hidden_size = opt.rnn_size // self.num_directions
-        # self.embeddings = gensim.models.Word2Vec.load(opt.embedding_w2v + 'processed_all.train_xe.code.gz')
-        self.word_lut = nn.Embedding(dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD)
-        self.input_size = self.opt.word_vec_size #self.embeddings.embedding_size #100
 
-        if len(self.opt.gpus) >= 1:
-            self.cudaFlag = True
-        else:
-            self.cudaFlag = False
+        self.word_lut = nn.Embedding(
+            dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD
+        )
+        self.input_size = self.opt.word_vec_size
 
-        self.leaf_module = BinaryTreeLeafModule(self.cudaFlag, self.input_size, self.hidden_size)
-        self.composer = BinaryTreeComposer(self.cudaFlag, self.input_size, self.hidden_size)
+        self.cudaFlag = len(self.opt.gpus) >= 1
+
+        self.leaf_module = BinaryTreeLeafModule(
+            self.cudaFlag, self.input_size, self.hidden_size
+        )
+        self.composer = BinaryTreeComposer(
+            self.cudaFlag, self.input_size, self.hidden_size
+        )
 
     def forward(self, tree, lengths):
         if not tree.children:
-            # try:
-            #     node = torch.Tensor(self.embeddings.wv[tree.content]).unsqueeze(0)
-            # except:
-            #     node = torch.zeros(1, self.input_size)
-            # if self.cudaFlag:
-            #     node = node.cuda()
-            node = self.word_lut(Variable(torch.LongTensor([self.dicts.lookup(tree.content, lib.Constants.UNK)])).cuda())
+            node_idx = torch.LongTensor(
+                [self.dicts.lookup(tree.content, lib.Constants.UNK)]
+            ).to("cuda" if self.cudaFlag else "cpu")
+            node = self.word_lut(Variable(node_idx))
 
-            output, state = self.leaf_module.forward(node) #  Variable(node, requires_grad=True)
+            output, state = self.leaf_module.forward(node)
 
         elif tree.children:
             # for idx in xrange(tree.num_children):
@@ -270,21 +316,21 @@ class TreeEncoder(nn.Module):
             if not tree.parent:
                 # max_length = int(torch.max(lengths.data))
                 max_length = np.max(lengths)
-                output.data.unsqueeze_(1)
-                supl = max_length - output.size()[0]
+                output = output.unsqueeze(1)
+                supl = max_length - output.size(0)
                 if supl > 0:
-                    output.data = torch.cat([output.data, torch.zeros((supl, output.size()[1], output.size()[2])).cuda()], 0)
+                    zeros = torch.zeros((supl, output.size(1), output.size(2))).to(
+                        "cuda" if self.cudaFlag else "cpu"
+                    )
+                    output = torch.cat([output, zeros], 0)
 
-                state[0].data.unsqueeze_(1)
-                state[1].data.unsqueeze_(1)
+                h, c = state
+                h = h.unsqueeze(1)
+                c = c.unsqueeze(1)
+                state = (h, c)
+
         return output, state
 
-    # def get_child_state(self, tree):
-    #     lc, lh = tree.children[0].state
-    #     lo = tree.children[0].output
-    #     rc, rh = tree.children[1].state
-    #     ro = tree.children[1].output
-    #     return lc, lh, lo, rc, rh, ro
 
 class HybridEncoder(nn.Module):
     def __init__(self, opt, dicts):
@@ -296,22 +342,34 @@ class HybridEncoder(nn.Module):
         assert opt.rnn_size % self.num_directions == 0
         self.hidden_size = opt.rnn_size // self.num_directions
         # self.embeddings = gensim.models.Word2Vec.load(opt.embedding_w2v + 'processed_all.train_xe.code.gz')
-        self.word_lut = nn.Embedding(dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD)
-        self.input_size = self.opt.word_vec_size #self.embeddings.embedding_size #100
+        self.word_lut = nn.Embedding(
+            dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD
+        )
+        self.input_size = self.opt.word_vec_size  # self.embeddings.embedding_size #100
 
         if len(self.opt.gpus) >= 1:
             self.cudaFlag = True
         else:
             self.cudaFlag = False
 
-        self.leaf_module = BinaryTreeLeafModule(self.cudaFlag, self.input_size, self.hidden_size)
-        self.composer = BinaryTreeComposer(self.cudaFlag, self.input_size, self.hidden_size)
+        self.leaf_module = BinaryTreeLeafModule(
+            self.cudaFlag, self.input_size, self.hidden_size
+        )
+        self.composer = BinaryTreeComposer(
+            self.cudaFlag, self.input_size, self.hidden_size
+        )
 
     def forward(self, tree, lengths):
         if not tree.children:
-            node = self.word_lut(Variable(torch.LongTensor([self.dicts.lookup(tree.content, lib.Constants.UNK)])).cuda())
+            node = self.word_lut(
+                Variable(
+                    torch.LongTensor([self.dicts.lookup(tree.content, lib.Constants.UNK)])
+                ).cuda()
+            )
 
-            output, state = self.leaf_module.forward(node) #  Variable(node, requires_grad=True)
+            output, state = self.leaf_module.forward(
+                node
+            )  #  Variable(node, requires_grad=True)
 
         elif tree.children:
             # for idx in xrange(tree.num_children):
@@ -328,11 +386,20 @@ class HybridEncoder(nn.Module):
                 output.data.unsqueeze_(1)
                 supl = max_length - output.size()[0]
                 if supl > 0:
-                    output.data = torch.cat([output.data, torch.zeros((supl, output.size()[1], output.size()[2])).cuda()], 0)
+                    output.data = torch.cat(
+                        [
+                            output.data,
+                            torch.zeros(
+                                (supl, output.size()[1], output.size()[2])
+                            ).cuda(),
+                        ],
+                        0,
+                    )
 
                 state[0].data.unsqueeze_(1)
                 state[1].data.unsqueeze_(1)
         return output, state
+
 
 class TreeDecoder_W2V(nn.Module):
     def __init__(self, opt, dicts):
@@ -344,13 +411,15 @@ class TreeDecoder_W2V(nn.Module):
 
         super(TreeDecoder_W2V, self).__init__()
         # self.word_lut = nn.Embedding(dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD)
-        self.embeddings = gensim.models.Word2Vec.load(opt.embedding_w2v + 'processed_all.train_xe.comment.gz')
+        self.embeddings = gensim.models.Word2Vec.load(
+            opt.embedding_w2v + "processed_all.train_xe.comment.gz"
+        )
 
         self.rnn = StackedLSTM(opt.layers, input_size, opt.rnn_size, opt.dropout)
         if opt.has_attn:
             self.attn = lib.GlobalAttention(opt.rnn_size)
         self.dropout = nn.Dropout(opt.dropout)
-        self.hidden_size =   opt.rnn_size
+        self.hidden_size = opt.rnn_size
         self.opt = opt
         self.dicts = dicts
 
@@ -360,7 +429,9 @@ class TreeDecoder_W2V(nn.Module):
         emb = []
         for i in range(input.shape[0]):
             emb_row = []
-            for w in self.dicts.convertToLabels(input[i].tolist(), lib.Constants.UNK_WORD):
+            for w in self.dicts.convertToLabels(
+                input[i].tolist(), lib.Constants.UNK_WORD
+            ):
                 try:
                     emb_row.append(self.embeddings.wv[w].astype(float))
                 except:
@@ -405,6 +476,7 @@ class TreeDecoder_W2V(nn.Module):
         outputs = torch.stack(outputs)
         return outputs
 
+
 class TreeDecoder(nn.Module):
     def __init__(self, opt, dicts):
         self.layers = opt.layers
@@ -414,12 +486,14 @@ class TreeDecoder(nn.Module):
             input_size += opt.rnn_size
 
         super(TreeDecoder, self).__init__()
-        self.word_lut = nn.Embedding(dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD)
+        self.word_lut = nn.Embedding(
+            dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD
+        )
         self.rnn = StackedLSTM(opt.layers, input_size, opt.rnn_size, opt.dropout)
         if opt.has_attn:
             self.attn = lib.GlobalAttention(opt.rnn_size)
         self.dropout = nn.Dropout(opt.dropout)
-        self.hidden_size =   opt.rnn_size
+        self.hidden_size = opt.rnn_size
         self.opt = opt
 
     def step(self, emb, output, hidden, context):
@@ -445,6 +519,7 @@ class TreeDecoder(nn.Module):
         outputs = torch.stack(outputs)
         return outputs
 
+
 class HybridDecoder(nn.Module):
     def __init__(self, opt, dicts):
         self.layers = opt.layers
@@ -454,7 +529,9 @@ class HybridDecoder(nn.Module):
             input_size += opt.rnn_size
 
         super(HybridDecoder, self).__init__()
-        self.word_lut = nn.Embedding(dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD)
+        self.word_lut = nn.Embedding(
+            dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD
+        )
         self.rnn = StackedLSTM(opt.layers, input_size, opt.rnn_size, opt.dropout)
         if opt.has_attn:
             # self.text_attn = lib.GlobalAttention(opt.rnn_size)
@@ -473,7 +550,9 @@ class HybridDecoder(nn.Module):
 
         output_txt, hidden_txt = self.rnn(emb, hidden_txt)
         if self.opt.has_attn:
-            output, attn_tree, attn_txt = self.attn(output_tree, context_tree, output_txt, context_txt)
+            output, attn_tree, attn_txt = self.attn(
+                output_tree, context_tree, output_txt, context_txt
+            )
         else:
             output = self.linear_out(torch.cat((output_tree, output_txt), 1))
 
@@ -485,12 +564,15 @@ class HybridDecoder(nn.Module):
         embs = self.word_lut(inputs)
         outputs = []
         for i in range(inputs.size(0)):
-            output, hidden_tree, hidden_txt = self.step(emb, output, hidden_tree, context_tree, hidden_txt, context_txt)
+            output, hidden_tree, hidden_txt = self.step(
+                emb, output, hidden_tree, context_tree, hidden_txt, context_txt
+            )
             outputs.append(output)
             emb = embs[i]
 
         outputs = torch.stack(outputs)
         return outputs
+
 
 class Hybrid2SeqModel(nn.Module):
     def __init__(self, code_encoder, text_encoder, decoder, generator, opt):
@@ -514,7 +596,9 @@ class Hybrid2SeqModel(nn.Module):
         enc_context_padded_tree, enc_hidden_tree0, enc_hidden_tree1 = [], [], []
         # code encoder
         for i, tree in enumerate(trees):
-            enc_ctx_txt, enc_hidden_tree = self.code_encoder(tree, lengths)  # enc_contex <=> outputs
+            enc_ctx_txt, enc_hidden_tree = self.code_encoder(
+                tree, lengths
+            )  # enc_contex <=> outputs
             enc_context_padded_tree.append(enc_ctx_txt)
             enc_hidden_tree0.append(enc_hidden_tree[0])
             enc_hidden_tree1.append(enc_hidden_tree[1])
@@ -525,12 +609,21 @@ class Hybrid2SeqModel(nn.Module):
         enc_hidden_txt, enc_context_txt = self.text_encoder(src_txt)
         init_output = self.make_init_decoder_output(enc_context_txt)
 
-        init_token = Variable(torch.LongTensor([lib.Constants.BOS] * init_output.size(0)), volatile=eval)
+        init_token = Variable(
+            torch.LongTensor([lib.Constants.BOS] * init_output.size(0)), volatile=eval
+        )
         if self.opt.cuda:
             init_token = init_token.cuda()
         emb = self.decoder.word_lut(init_token)
 
-        return tgt, (emb, init_output, enc_hidden_tree, enc_context_padded_tree.transpose(0, 1), enc_hidden_txt, enc_context_txt.transpose(0,1))
+        return tgt, (
+            emb,
+            init_output,
+            enc_hidden_tree,
+            enc_context_padded_tree.transpose(0, 1),
+            enc_hidden_txt,
+            enc_context_txt.transpose(0, 1),
+        )
 
     def forward(self, inputs, eval, regression=False):
         targets, init_states = self.initialize(inputs, eval)
@@ -541,8 +634,12 @@ class Hybrid2SeqModel(nn.Module):
             return logits.view_as(targets)
         return outputs
 
-    def backward(self, outputs, targets, weights, normalizer, criterion, regression=False):
-        grad_output, loss = self.generator.backward(outputs, targets, weights, normalizer, criterion, regression)
+    def backward(
+        self, outputs, targets, weights, normalizer, criterion, regression=False
+    ):
+        grad_output, loss = self.generator.backward(
+            outputs, targets, weights, normalizer, criterion, regression
+        )
         outputs.backward(grad_output)
         return loss
 
@@ -560,15 +657,18 @@ class Hybrid2SeqModel(nn.Module):
 
         for i in range(max_length):
             # output, hidden = self.decoder.step(emb, output, hidden, context)
-            output, hidden_tree, hidden_txt = self.decoder.step(emb, output, hidden_tree, context_tree, hidden_txt, context_txt)
+            output, hidden_tree, hidden_txt = self.decoder.step(
+                emb, output, hidden_tree, context_tree, hidden_txt, context_txt
+            )
 
             logit = self.generator(output)
             pred = logit.max(1)[1].view(-1).data
             preds.append(pred)
 
             # Stop if all sentences reach EOS.
-            num_eos |= (pred == lib.Constants.EOS)
-            if num_eos.sum() == batch_size: break
+            num_eos |= pred == lib.Constants.EOS
+            if num_eos.sum() == batch_size:
+                break
 
             emb = self.decoder.word_lut(Variable(pred))
 
@@ -586,7 +686,9 @@ class Hybrid2SeqModel(nn.Module):
 
         for i in range(max_length):
             # output, hidden = self.decoder.step(emb, output, hidden, context)
-            output, hidden_tree, hidden_txt = self.decoder.step(emb, output, hidden_tree, context_tree, hidden_txt, context_txt)
+            output, hidden_tree, hidden_txt = self.decoder.step(
+                emb, output, hidden_tree, context_tree, hidden_txt, context_txt
+            )
 
             outputs.append(output)
             dist = F.softmax(self.generator(output))
@@ -594,14 +696,16 @@ class Hybrid2SeqModel(nn.Module):
             samples.append(sample)
 
             # Stop if all sentences reach EOS.
-            num_eos |= (sample == lib.Constants.EOS)
-            if num_eos.sum() == batch_size: break
+            num_eos |= sample == lib.Constants.EOS
+            if num_eos.sum() == batch_size:
+                break
 
             emb = self.decoder.word_lut(Variable(sample))
 
         outputs = torch.stack(outputs)
         samples = torch.stack(samples)
         return samples, outputs
+
 
 class Tree2SeqModel(nn.Module):
     def __init__(self, encoder, decoder, generator, opt):
@@ -620,9 +724,12 @@ class Tree2SeqModel(nn.Module):
         #  the encoder hidden is  (layers*directions) x batch x dim
         #  we need to convert it to layers x batch x (directions*dim)
         if self.encoder.num_directions == 2:
-            return h.view(h.size(0) // 2, 2, h.size(1), h.size(2)) \
-                .transpose(1, 2).contiguous() \
+            return (
+                h.view(h.size(0) // 2, 2, h.size(1), h.size(2))
+                .transpose(1, 2)
+                .contiguous()
                 .view(h.size(0) // 2, h.size(1), h.size(2) * 2)
+            )
         else:
             return h
 
@@ -648,8 +755,13 @@ class Tree2SeqModel(nn.Module):
         enc_hidden = (torch.cat(enc_hidden0, 1), torch.cat(enc_hidden1, 1))
 
         init_output = self.make_init_decoder_output(enc_context_padded)
-        enc_hidden = (self._fix_enc_hidden(enc_hidden[0]), self._fix_enc_hidden(enc_hidden[1]))
-        init_token = Variable(torch.LongTensor([lib.Constants.BOS] * init_output.size(0)), volatile=eval)
+        enc_hidden = (
+            self._fix_enc_hidden(enc_hidden[0]),
+            self._fix_enc_hidden(enc_hidden[1]),
+        )
+        init_token = Variable(
+            torch.LongTensor([lib.Constants.BOS] * init_output.size(0)), volatile=eval
+        )
         if self.opt.cuda:
             init_token = init_token.cuda()
         emb = self.decoder.word_lut(init_token)
@@ -664,8 +776,12 @@ class Tree2SeqModel(nn.Module):
             return logits.view_as(targets)
         return outputs
 
-    def backward(self, outputs, targets, weights, normalizer, criterion, regression=False):
-        grad_output, loss = self.generator.backward(outputs, targets, weights, normalizer, criterion, regression)
+    def backward(
+        self, outputs, targets, weights, normalizer, criterion, regression=False
+    ):
+        grad_output, loss = self.generator.backward(
+            outputs, targets, weights, normalizer, criterion, regression
+        )
         outputs.backward(grad_output)
         return loss
 
@@ -687,8 +803,9 @@ class Tree2SeqModel(nn.Module):
             preds.append(pred)
 
             # Stop if all sentences reach EOS.
-            num_eos |= (pred == lib.Constants.EOS)
-            if num_eos.sum() == batch_size: break
+            num_eos |= pred == lib.Constants.EOS
+            if num_eos.sum() == batch_size:
+                break
 
             emb = self.decoder.word_lut(Variable(pred))
 
@@ -712,14 +829,16 @@ class Tree2SeqModel(nn.Module):
             samples.append(sample)
 
             # Stop if all sentences reach EOS.
-            num_eos |= (sample == lib.Constants.EOS)
-            if num_eos.sum() == batch_size: break
+            num_eos |= sample == lib.Constants.EOS
+            if num_eos.sum() == batch_size:
+                break
 
             emb = self.decoder.word_lut(Variable(sample))
 
         outputs = torch.stack(outputs)
         samples = torch.stack(samples)
         return samples, outputs
+
 
 class Seq2SeqModel(nn.Module):
     def __init__(self, encoder, decoder, generator, opt):
@@ -738,9 +857,12 @@ class Seq2SeqModel(nn.Module):
         #  the encoder hidden is  (layers*directions) x batch x dim
         #  we need to convert it to layers x batch x (directions*dim)
         if self.encoder.num_directions == 2:
-            return h.view(h.size(0) // 2, 2, h.size(1), h.size(2)) \
-                    .transpose(1, 2).contiguous() \
-                    .view(h.size(0) // 2, h.size(1), h.size(2) * 2)
+            return (
+                h.view(h.size(0) // 2, 2, h.size(1), h.size(2))
+                .transpose(1, 2)
+                .contiguous()
+                .view(h.size(0) // 2, h.size(1), h.size(2) * 2)
+            )
         else:
             return h
 
@@ -749,8 +871,13 @@ class Seq2SeqModel(nn.Module):
         tgt = inputs[2]
         enc_hidden, context = self.encoder(src)
         init_output = self.make_init_decoder_output(context)
-        enc_hidden = (self._fix_enc_hidden(enc_hidden[0]), self._fix_enc_hidden(enc_hidden[1]))
-        init_token = Variable(torch.LongTensor([lib.Constants.BOS] * init_output.size(0)), volatile=eval)
+        enc_hidden = (
+            self._fix_enc_hidden(enc_hidden[0]),
+            self._fix_enc_hidden(enc_hidden[1]),
+        )
+        init_token = Variable(
+            torch.LongTensor([lib.Constants.BOS] * init_output.size(0)), volatile=eval
+        )
 
         if self.opt.cuda:
             init_token = init_token.cuda()
@@ -767,8 +894,12 @@ class Seq2SeqModel(nn.Module):
             return logits.view_as(targets)
         return outputs
 
-    def backward(self, outputs, targets, weights, normalizer, criterion, regression=False):
-        grad_output, loss = self.generator.backward(outputs, targets, weights, normalizer, criterion, regression)
+    def backward(
+        self, outputs, targets, weights, normalizer, criterion, regression=False
+    ):
+        grad_output, loss = self.generator.backward(
+            outputs, targets, weights, normalizer, criterion, regression
+        )
         outputs.backward(grad_output)
         return loss
 
@@ -778,8 +909,8 @@ class Seq2SeqModel(nn.Module):
     def translate(self, inputs, max_length):
         targets, init_states = self.initialize(inputs, eval=True)
         emb, output, hidden, context = init_states
-        
-        preds = [] 
+
+        preds = []
         batch_size = targets.size(1)
         num_eos = targets[0].data.byte().new(batch_size).zero_()
 
@@ -789,8 +920,9 @@ class Seq2SeqModel(nn.Module):
             pred = logit.max(1)[1].view(-1).data
             preds.append(pred)
 
-            num_eos |= (pred == lib.Constants.EOS)
-            if num_eos.sum() == batch_size: break
+            num_eos |= pred == lib.Constants.EOS
+            if num_eos.sum() == batch_size:
+                break
 
             emb = self.decoder.word_lut(Variable(pred))
 
@@ -814,8 +946,9 @@ class Seq2SeqModel(nn.Module):
             samples.append(sample)
 
             # Stop if all sentences reach EOS.
-            num_eos |= (sample == lib.Constants.EOS)
-            if num_eos.sum() == batch_size: break
+            num_eos |= sample == lib.Constants.EOS
+            if num_eos.sum() == batch_size:
+                break
 
             emb = self.decoder.word_lut(Variable(sample))
             # emb = self.decoder.embedding(sample.unsqueeze(1).cpu().numpy()).squeeze(1)
