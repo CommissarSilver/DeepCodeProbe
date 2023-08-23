@@ -19,20 +19,21 @@ import time
 def get_opt():
     parser = argparse.ArgumentParser(description="a2c-train.py")
     # Data options
+    working_path = "/Users/ahura/Nexus/Leto/src/code_sum_drl/dataset"
     parser.add_argument(
         "-data",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/processed_all.train.pt",
+        default=f"{working_path}/train/processed_all.train.pt",
         help="Path to the *-train.pt file from preprocess.py",
     )
     parser.add_argument(
         "-save_dir",
-        default="/usagers3/vamaj/code_summarization_public/dataset/result/",
+        default=f"{working_path}/result/",
         help="Directory to save models",
     )
     parser.add_argument("-load_from", help="Path to load a pretrained model.")
     parser.add_argument(
         "-embedding_w2v",
-        default="/usagers3/vamaj/code_summarization_public/dataset/train/",
+        default=f"{working_path}/train/",
         help="Path to the *-embedding_w2v file from preprocess.py",
     )
     parser.add_argument("-train_portion", type=float, default=0.6)
@@ -126,7 +127,7 @@ def get_opt():
     )
     # GPU
     parser.add_argument(
-        "-gpus", default=[0], nargs="+", type=int, help="Use CUDA on the listed devices."
+        "-gpus", default=[], nargs="+", type=int, help="Use CUDA on the listed devices."
     )
     parser.add_argument(
         "-log_interval", type=int, default=50, help="Print stats at this interval."
@@ -202,7 +203,7 @@ def get_opt():
 def get_data_trees(trees):
     data_trees = []
     for t_json in trees:
-        for k, node in t_json.iteritems():
+        for k, node in t_json.items():
             if node["parent"] == None:
                 root_idx = k
         tree = json2tree_binary(t_json, Tree(), root_idx)
@@ -367,8 +368,7 @@ def main():
 
     if torch.cuda.is_available() and not opt.cuda:
         print("WARNING: You have a CUDA device, so you should probably run with -gpus 1")
-    
-    
+
     if opt.cuda:
         cuda.device(0)
         torch.cuda.manual_seed(opt.seed)
@@ -387,7 +387,7 @@ def main():
             model, optim = create_model(lib.Seq2SeqModel, dicts, dicts["tgt"].size())
         elif opt.data_type == "hybrid":
             model, optim = create_model(lib.Hybrid2SeqModel, dicts, dicts["tgt"].size())
-            
+
         checkpoint = None
         print("model: ", model)
         print("optim: ", optim)
