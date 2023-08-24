@@ -79,7 +79,7 @@ def code_to_ast(code: str):
 
         return D, C, U
     except Exception as e:
-        pass
+        return [], [], []
 
 
 def ast_to_index(
@@ -102,8 +102,11 @@ def ast_to_index(
 
 def code_to_index(code: str):
     D, C, U = code_to_ast(code)
-    D, C, U = ast_to_index(D, C, U)
-    return {"d": D, "c": C, "u": U}
+    if (D, C, U) == ([], [], []):
+        return {"d": [], "c": [], "u": []}
+    else:
+        D, C, U = ast_to_index(D, C, U)
+        return {"d": D, "c": C, "u": U}
 
 
 if __name__ == "__main__":
@@ -111,7 +114,16 @@ if __name__ == "__main__":
         "/Users/ahura/Nexus/Leto/src/code_sum_drl/dataset/train/train0.60.20.2.code"
     )
     codes = open(path_to_code).readlines()
+    errors = 0
+    no_errors = 0
     for code in codes:
         # ds, cs, us = code_to_ast(code)
         # ds, cs, us = ast_to_index(ds, cs, us)
         test = code_to_index(code)
+        if (test["d"], test["c"], test["u"]) == ([], [], []):
+            errors += 1
+        else:
+            no_errors += 1
+
+    print("errors: ", errors)
+    print("no_errors: ", no_errors)
