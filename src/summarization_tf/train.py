@@ -122,22 +122,14 @@ checkpoint_dir = "./models/" + name
 
 
 # load data
-
-trn_data = read_pickle(
-    "/Users/ahura/Nexus/Leto/src/summarization_tf/dataset/nl/train.pkl"
-)
-vld_data = read_pickle(
-    "/Users/ahura/Nexus/Leto/src/summarization_tf/dataset/nl/valid.pkl"
-)
-tst_data = read_pickle("/Users/ahura/Nexus/Leto/src/summarization_tf/dataset/nl/test.pkl")
-code_i2w = read_pickle(
-    "/Users/ahura/Nexus/Leto/src/summarization_tf/dataset/code_i2w.pkl"
-)
-code_w2i = read_pickle(
-    "/Users/ahura/Nexus/Leto/src/summarization_tf/dataset/code_w2i.pkl"
-)
-nl_i2w = read_pickle("/Users/ahura/Nexus/Leto/src/summarization_tf/dataset/nl_i2w.pkl")
-nl_w2i = read_pickle("/Users/ahura/Nexus/Leto/src/summarization_tf/dataset/nl_w2i.pkl")
+dataset_path = "/Users/ahura/Nexus/Leto/src/summarization_tf/dataset"
+trn_data = read_pickle(f"{dataset_path}/nl/train.pkl")
+vld_data = read_pickle(f"{dataset_path}/nl/valid.pkl")
+tst_data = read_pickle(f"{dataset_path}/nl/test.pkl")
+code_i2w = read_pickle(f"{dataset_path}/code_i2w.pkl")
+code_w2i = read_pickle(f"{dataset_path}/code_w2i.pkl")
+nl_i2w = read_pickle(f"{dataset_path}/nl_i2w.pkl")
+nl_w2i = read_pickle(f"{dataset_path}/nl_w2i.pkl")
 
 trn_x, trn_y_raw = zip(*sorted(trn_data.items()))
 vld_x, vld_y_raw = zip(*sorted(vld_data.items()))
@@ -229,9 +221,7 @@ for epoch in range(1, epochs + 1):
         preds += res
         trues += [s[1:-1] for s in y_raw]
         bleus += [bleu4(tt, p) for tt, p in zip(trues, preds)]
-        t.set_description(
-            "epoch:{:03d}, bleu_val = {:.6f}".format(epoch, np.mean(bleus))
-        )
+        t.set_description("epoch:{:03d}, bleu_val = {:.6f}".format(epoch, np.mean(bleus)))
     history["bleu_val"].append(np.mean(bleus))
     writer.add_scalar("bleu_val", np.mean(bleus), epoch)
 
@@ -246,7 +236,7 @@ history["loss_val"].append(np.sum(loss_tmp) / len(t))
 writer.add_scalar("loss_val", np.sum(loss_tmp) / len(t), epoch)
 
 # checkpoint
-torch.save(model.state_dict(), f'checkpoints/epoch_{epoch}.pth')
+torch.save(model.state_dict(), f"checkpoints/epoch_{epoch}.pth")
 if history["bleu_val"][-1] == max(history["bleu_val"]):
-    best_model_path = f'checkpoints/epoch_{epoch}.pth'
+    best_model_path = f"checkpoints/epoch_{epoch}.pth"
     print(f"Now best model is at {best_model_path}")
