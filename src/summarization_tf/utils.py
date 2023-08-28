@@ -237,11 +237,7 @@ def pad_tensor(ys):
     ys = torch.stack(
         [torch.nn.functional.pad(y, (0, 0, 0, max_length - y.shape[0])) for y in ys]
     )
-    mask = (
-        torch.arange(0, max_length, dtype=torch.int32)
-        .unsqueeze(0)
-        .expand(len(length), -1)
-    )
+    mask = torch.arange(max_length).expand(len(length), -1)
     mask = mask < torch.tensor(length).unsqueeze(1)
     return ys, mask
 

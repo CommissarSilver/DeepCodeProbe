@@ -206,67 +206,47 @@ for epoch in range(1, epochs + 1):
     loss_tmp = []
     t = tqdm(trn_gen(0))
     for x, y, _, _ in t:
-        try:
-            if torch.cuda.is_available():
-                model.cuda()
-                x = x.cuda()
-                y = y.cuda()
-
-            model.optimizer.zero_grad()
-            loss = model.train_on_batch(x, torch.tensor(y))
-
-            loss_tmp.append(loss.item())
-            t.set_description(
-                "epoch:{:03d}, loss = {:.6f}".format(epoch, np.mean(loss_tmp))
+        model.optimizer.zero_grad()
+        loss = model.train_on_batch(x, torch.tensor(y))
+        loss_tmp.append(loss.item())
+        t.set_description("epoch:{:03d}, loss = {:.6f}".format(epoch, np.mean(loss_tmp)))
+        batch_turn += 1
+        history["loss"].append(np.sum(loss_tmp) / len(t))
+        writer.add_scalar("loss", np.sum(loss_tmp) / len(t), epoch)
+        if batch_turn % 100 == 0:
+            torch.save(
+                model.state_dict(),
+                f"/Users/ahura/Nexus/Leto/src/summarization_tf/checkpoints/epoch_{epoch}_batch_{batch_turn}.pth",
             )
-            batch_turn += 1
-            if torch.cuda.is_available():
-                x.detach()
-                y.detach()
-                torch.cuda.empty_cache()
-            
-            if batch_turn % 100 == 0:
-                torch.save(
-                    model.state_dict(),
-                    f"/Users/ahura/Nexus/Leto/src/summarization_tf/checkpoints/epoch_{epoch}_batch_{batch_turn}.pth",
-                )
-        except Exception as e:
-            print(e)
-            pass
 
-    torch.save(
-        model.state_dict(),
-        f"/Users/ahura/Nexus/Leto/src/summarization_tf/checkpoints/epoch_{epoch}.pth",
-    )
-    history["loss"].append(np.sum(loss_tmp) / len(t))
-    writer.add_scalar("loss", np.sum(loss_tmp) / len(t), epoch)
+    # validate bleu
+    preds = []
+    trues = []
+    bleus = []
+    t = tqdm(vld_gen(0))
+    for x, y, _, y_raw in t:
+        res = model.translate(x, nl_i2w, nl_w2i)
+        preds += res
+        trues += [s[1:-1] for s in y_raw]
+        bleus += [bleu4(tt, p) for tt, p in zip(trues, preds)]
+        t.set_description(
+            "epoch:{:03d}, bleu_val = {:.6f}".format(epoch, np.mean(bleus))
+        )
+    history["bleu_val"].append(np.mean(bleus))
+    writer.add_scalar("bleu_val", np.mean(bleus), epoch)
 
-    # # validate loss
-    # loss_tmp = []
-    # t = tqdm(vld_gen(0))
-    # for x, y, _, _ in t:
-    #     loss = model.evaluate_on_batch(x, y)
-    #     loss_tmp.append(loss.item())
-    #     t.set_description("epoch:{:03d}, loss_val = {:.6f}".format(epoch, np.mean(loss_tmp)))
-    # history["loss_val"].append(np.sum(loss_tmp) / len(t))
-    # writer.add_scalar("loss_val", np.sum(loss_tmp) / len(t), epoch)
+# validate loss
+loss_tmp = []
+t = tqdm(vld_gen(0))
+for x, y, _, _ in t:
+    loss = model.evaluate_on_batch(x, y)
+    loss_tmp.append(loss.item())
+    t.set_description("epoch:{:03d}, loss_val = {:.6f}".format(epoch, np.mean(loss_tmp)))
+history["loss_val"].append(np.sum(loss_tmp) / len(t))
+writer.add_scalar("loss_val", np.sum(loss_tmp) / len(t), epoch)
 
-    # # validate bleu
-    # preds = []
-    # trues = []
-    # bleus = []
-    # t = tqdm(vld_gen(0))
-    # for x, y, _, y_raw in t:
-    #     res = model.translate(x, nl_i2w, nl_w2i)
-    #     preds += res
-    #     trues += [s[1:-1] for s in y_raw]
-    #     bleus += [bleu4(tt, p) for tt, p in zip(trues, preds)]
-    #     t.set_description("epoch:{:03d}, bleu_val = {:.6f}".format(epoch, np.mean(bleus)))
-    # history["bleu_val"].append(np.mean(bleus))
-    # writer.add_scalar("bleu_val", np.mean(bleus), epoch)
-
-    # # checkpoint
-    # torch.save(model.state_dict(), f'checkpoints/epoch_{epoch}.pth')
-    # if history["bleu_val"][-1] == max(history["bleu_val"]):
-    #     best_model_path = f'checkpoints/epoch_{epoch}.pth'
-    #     print(f"Now best model is at {best_model_path}")
+# checkpoint
+torch.save(model.state_dict(), f'checkpoints/epoch_{epoch}.pth')
+if history["bleu_val"][-1] == max(history["bleu_val"]):
+    best_model_path = f'checkpoints/epoch_{epoch}.pth'
+    print(f"Now best model is at {best_model_path}")
