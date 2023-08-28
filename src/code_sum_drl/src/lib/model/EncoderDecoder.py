@@ -759,9 +759,15 @@ class Tree2SeqModel(nn.Module):
             self._fix_enc_hidden(enc_hidden[0]),
             self._fix_enc_hidden(enc_hidden[1]),
         )
-        init_token = Variable(
-            torch.LongTensor([lib.Constants.BOS] * init_output.size(0)), volatile=eval
-        )
+        if eval:
+            with torch.no_grad():
+                init_token = Variable(
+                    torch.LongTensor([lib.Constants.BOS] * init_output.size(0)),
+                )
+        else:
+            init_token = Variable(
+                torch.LongTensor([lib.Constants.BOS] * init_output.size(0))
+            )
         if self.opt.cuda:
             init_token = init_token.cuda()
         emb = self.decoder.word_lut(init_token)
