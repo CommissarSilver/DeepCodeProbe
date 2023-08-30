@@ -4,7 +4,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch_scatter import scatter_mean
 
 
-def get_embeddings_astnn(all_inputs, model_name, model, **kwargs):
+def get_embeddings_astnn(all_inputs, model, **kwargs):
     """
     function for getting the intermediate inputs of the ASTNN model
 
@@ -21,7 +21,7 @@ def get_embeddings_astnn(all_inputs, model_name, model, **kwargs):
     return embs
 
 
-def get_embeddings_funcgnn(all_inputs, model_name, model, **kwargs):
+def get_embeddings_funcgnn(all_inputs, model, **kwargs):
     """
     function for getting the intermediate inputs of the FuncGNN model
 
@@ -67,7 +67,7 @@ def collator_fn_astnn(batch):
     us = [b["u"] for b in batch]
 
     batch_len_tokens = np.max([len(m) for m in ds])
-    
+
     max_len_c_tokens = 0
     for children_tokens in cs:
         for child_tokens in children_tokens:
