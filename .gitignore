@@ -1,9 +1,11 @@
 *.pyc
 *.gz
+*.bin
 .vscode
+.DS_Store
+dataset.zip
 __pycache__
 dataset
-.DS_Store
 logs
 grammars
 trained_models
@@ -15,4 +17,5 @@ src/summarization_tf/parser
 runs/
 src/summarization_tf/checkpoints/*
 models
-dataset.zip
+results/*
+
