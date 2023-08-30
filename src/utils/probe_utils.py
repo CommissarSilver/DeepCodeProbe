@@ -76,10 +76,8 @@ def train_probe(
         ):
             ds, cs, us, batch_len_tokens, original_code_strings = batch
 
-            embds = embedding_func(
-                original_code_strings, "funcgnn", model_under_probe, max_len=29
-            )
-
+            embds = embedding_func(original_code_strings, model_under_probe, max_len=29)
+            # d_pred, c_pred, u_pred = probe_model(embds.permute(0, 2, 1).to(device)) #! THIS SHOULD BE TURNED ON FOR ASTNN UNTIL I FIND A FIX
             d_pred, c_pred, u_pred = probe_model(embds.to(device))
 
             loss = criterion(
@@ -167,12 +165,10 @@ def eval_probe(
             cs = cs.to(device)
             us = us.to(device)
 
-            embds = embedding_func(
-                original_code_strings, "funcgnn", model_under_probe, max_len=29
-            )
+            embds = embedding_func(original_code_strings, model_under_probe, max_len=29)
 
+            # d_pred, c_pred, u_pred = probe_model(embds.permute(0, 2, 1).to(device)) #! THIS SHOULD BE TURNED ON FOR ASTNN UNTIL I FIND A FIX
             d_pred, c_pred, u_pred = probe_model(embds.to(device))
-
             loss = probe_loss(
                 d_pred=d_pred.to(device),
                 c_pred=c_pred.to(device),
