@@ -9,7 +9,8 @@ def code_to_ast(code: str, language: str):
     if language == "c":
         from pycparser import c_parser
 
-        tree = c_parser.parse(code)  # parse the code to generate AST
+        parser = c_parser.CParser()
+        tree = parser.parse(code)  # parse the code to generate AST
 
     elif language == "java":
         import javalang
@@ -23,7 +24,10 @@ def code_to_ast(code: str, language: str):
 
 def ast_to_index(tree, language):
     if language == "c":
-        from prepare_data import get_blocks as func
+        try:
+            from prepare_data import get_blocks as func
+        except ImportError:
+            from ast_nn.src.prepare_data import get_blocks as func
 
         word2vec = Word2Vec.load(
             "/Users/ahura/Nexus/Leto/src/ast_nn/dataset/c/embeddings/node_w2v_128"
@@ -72,7 +76,9 @@ def ast_to_index(tree, language):
             btree = tree_to_index(b)
             tree_info[i] = {
                 "d": block_position,
-                "u": vocab.key_to_index[block_token] if block_token in vocab else max_token,
+                "u": vocab.key_to_index[block_token]
+                if block_token in vocab
+                else max_token,
                 "c": list(unpack(btree)),
             }
         # unpakc all ds into a list
@@ -91,17 +97,8 @@ def code_to_index(code, language):
 
 
 if __name__ == "__main__":
-    # tree = code_to_ast(
-    #     "public static void pipe(InputStream in, OutputStream out) throws IOException {\n        byte[] buf = new byte[4096];\n        int n;\n        while ((n = in.read(buf, 0, buf.length)) >= 0) out.write(buf, 0, n);\n    }\n",
-    #     "java",
-    # )
-    # y = ast_to_index(
-    #     "/Users/ahura/Nexus/Leto/src/ast_nn/dataset/java/embeddings/node_w2v_128",
-    #     tree,
-    #     "java",
-    # )
     x = code_to_index(
         "public static void pipe(InputStream in, OutputStream out) throws IOException {\n        byte[] buf = new byte[4096];\n        int n;\n        while ((n = in.read(buf, 0, buf.length)) >= 0) out.write(buf, 0, n);\n    }\n",
-        "java",
+        "c",
     )
     print(x)
