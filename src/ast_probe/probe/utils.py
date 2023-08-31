@@ -52,6 +52,12 @@ def get_embeddings_funcgnn(all_inputs, model, **kwargs):
     return embs
 
 
+def get_embeddings_sum_tf(all_inputs, model, **kwargs):
+    with torch.no_grad():
+        y, (c, h) = model.encode(all_inputs)
+    return (c, h)
+
+
 def collator_fn_astnn(batch):
     """
     collator function for ASTNN
@@ -125,4 +131,33 @@ def collator_fn_funcgnn(batch):
         us_tensor,
         torch.tensor(batch_len_tokens),
         batch,
+    )
+
+
+def collator_fn_sum_tf(batch):
+    original_code_string = [b["y_raw"] for b in batch]
+    tree_tensors = [b["tree_tensor"] for b in batch]
+
+    cs = [b["c"] for b in batch]
+    ds = [b["d"] for b in batch]
+    us = [b["u"] for b in batch]
+
+    batch_len_tokens = np.max([len(m) for m in ds])
+    batch_len_cs = np.max([len(m) for m in cs])
+    batch_len_us = np.max([len(m) for m in us])
+
+    ds = [d + [[-1, -1]] * (batch_len_tokens - len(d)) for d in ds]
+    cs = [c + [-1] * (batch_len_cs - len(c)) for c in cs]
+    us = [u + [-1] * (batch_len_us - len(u)) for u in us]
+
+    ds_tensor = torch.tensor(ds)
+    cs_tensor = torch.tensor(cs)
+    us_tensor = torch.tensor(us)
+
+    return (
+        ds_tensor,
+        cs_tensor,
+        us_tensor,
+        torch.tensor(batch_len_tokens),
+        tree_tensors,
     )
