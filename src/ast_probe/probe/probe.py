@@ -147,3 +147,7 @@ class FuncGNNParserProbe(Probe):
         us_pred = torch.matmul(transformed, self.vectors_u)
 
         return (ds_pred, cs_pred, us_pred)
+
+
+class SumTFParserProbe(Probe):
+    pass
