@@ -2,7 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
-from layers import *
+
+try:
+    from layers import *
+except ImportError:
+    from .layers import *
 import numpy as np
 
 
