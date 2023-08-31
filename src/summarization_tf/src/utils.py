@@ -165,8 +165,23 @@ def partial_traverse(root, kernel_depth, depth=0, children=[], depthes=[], left=
     return (children, depthes, left)
 
 
+def map_old_to_new_namespace(name):
+    if name == "utils.Node":
+        return Node
+
+
+class NamespaceMappingUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        mapped = map_old_to_new_namespace(f"{module}.{name}")
+        if mapped is not None:
+            return mapped
+        return super().find_class(module, name)
+
+
 def read_pickle(path):
-    return pickle.load(open(path, "rb"))
+    with open(path, "rb") as file:
+        unpickler = NamespaceMappingUnpickler(file)
+        return unpickler.load()
 
 
 def consult_tree(root, dic):
