@@ -1,5 +1,5 @@
-from .loss import ParserLoss, ParserLossFuncGNN
-from .probe import ParserProbe, FuncGNNParserProbe
+from .loss import ParserLoss, ParserLossFuncGNN, ParserLossSumTF
+from .probe import ParserProbe, FuncGNNParserProbe, SumTFParserProbe
 from .utils import (
     get_embeddings_astnn,
     get_embeddings_funcgnn,
