@@ -1,15 +1,7 @@
 import os, torch, yaml, logging, logging.config, warnings, argparse, numpy as np
 from datasets import load_dataset
 from utils import probe_utils
-from ast_probe.probe.utils import collator_fn_astnn, collator_fn_funcgnn
-from ast_probe.probe import (
-    ParserProbe,
-    ParserLossFuncGNN,
-    ParserLoss,
-    get_embeddings_astnn,
-    get_embeddings_funcgnn,
-    FuncGNNParserProbe,
-)
+
 
 warnings.filterwarnings("ignore")
 with open(os.path.join(os.getcwd(), "src", "logging_config.yaml"), "r") as f:
@@ -75,8 +67,9 @@ parser.add_argument(
 parser.add_argument(
     "--probe_hidden_dim",
     type=int,
-    default=200,
-    help="Hidden dimension of the probe",
+    default=512,
+    choices=[200, 512],
+    help="Hidden dimension of the probe. 200 for FuncGnn, 512 for SumTF",
 )
 args = parser.parse_args()
 #### Arguemnt Parser ####
@@ -87,7 +80,12 @@ if args.model == "ast_nn":
     from ast_nn.src.data_pipeline import process_input
     from ast_nn.src.model import BatchProgramCC
     from gensim.models.word2vec import Word2Vec
-    from ast_probe.probe import get_embeddings_astnn, collator_fn_astnn
+    from ast_probe.probe import (
+        ParserProbe,
+        ParserLoss,
+        get_embeddings_astnn,
+        collator_fn_astnn,
+    )
 
     data_files = {
         "train": os.path.join(args.dataset_path, args.language, "train.jsonl"),
@@ -221,6 +219,14 @@ elif args.model == "funcgnn":
     from funcgnn.src.code_to_repr import code_to_index
     from funcgnn.src.funcgnn import funcGNNTrainer
     from funcgnn.src.param_parser import parameter_parser
+
+    from ast_probe.probe import (
+        FuncGNNParserProbe,
+        ParserLossFuncGNN,
+        get_embeddings_funcgnn,
+        collator_fn_funcgnn,
+    )
+
     import json, pandas as pd
 
     # the data_files come from the original dataset of FungGNN
@@ -277,15 +283,22 @@ elif args.model == "funcgnn":
         train_epochs=args.train_epochs,
         output_path=os.path.join(os.getcwd(), "results", "funcgnn"),
     )
-    print("hi")
+
 
 elif args.model == "sum_tf":
+    import pandas as pd
+    from torch.utils.data import Dataset
+
     from summarization_tf.src.code_to_repr import code_to_index
     from summarization_tf.src.models import MultiwayModel
-    import pandas as pd
     from summarization_tf.src.utils import read_pickle
-    from ast_probe.probe import get_embeddings_sum_tf, collator_fn_sum_tf
-    from torch.utils.data import Dataset
+
+    from ast_probe.probe import (
+        SumTFParserProbe,
+        ParserLossSumTF,
+        get_embeddings_sum_tf,
+        collator_fn_sum_tf,
+    )
 
     class CustomDataset(Dataset):
         def __init__(self, dataframe):
@@ -303,9 +316,9 @@ elif args.model == "sum_tf":
         "test": os.path.join(args.dataset_path, "test.json"),
     }
 
-    train_set = load_dataset("json", data_files=data_files, split="train[:64]")
-    valid_set = load_dataset("json", data_files=data_files, split="valid[:64]")
-    test_set = load_dataset("json", data_files=data_files, split="test[:64]")
+    train_set = load_dataset("json", data_files=data_files, split="train")
+    valid_set = load_dataset("json", data_files=data_files, split="valid")
+    test_set = load_dataset("json", data_files=data_files, split="test")
 
     train_set_processed = [
         code_to_index(i["code"], i["nl"], idx) for idx, i in enumerate(train_set)
@@ -370,12 +383,13 @@ elif args.model == "sum_tf":
     train_set = CustomDataset(train_set)
     test_set = CustomDataset(test_set)
     valid_set = CustomDataset(valid_set)
-    probe_model = FuncGNNParserProbe(
+
+    probe_model = SumTFParserProbe(
         probe_rank=args.probe_rank,
-        hidden_dim=64,
-        number_labels_d=max_d_len_train,
-        number_labels_c=max_c_len_train,
-        number_labels_u=max_u_len_train,
+        hidden_dim=args.probe_hidden_dim,
+        number_labels_d=max_d_len,
+        number_labels_c=max_c_len,
+        number_labels_u=max_u_len,
     ).to(device)
 
     probe_utils.train_probe(
@@ -386,7 +400,7 @@ elif args.model == "sum_tf":
         batch_size=args.batch_size,
         patience=args.patience,
         probe_model=probe_model,
-        probe_loss=ParserLossFuncGNN(max_c_len=max_c_len_train),
+        probe_loss=ParserLossSumTF(max_c_len=max_c_len_train),
         model_under_probe=model,
         train_epochs=args.train_epochs,
         output_path=os.path.join(os.getcwd(), "results", "funcgnn"),
