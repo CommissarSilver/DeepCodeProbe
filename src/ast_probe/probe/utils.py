@@ -53,9 +53,18 @@ def get_embeddings_funcgnn(all_inputs, model, **kwargs):
 
 
 def get_embeddings_sum_tf(all_inputs, model, **kwargs):
+    from summarization_tf.src.utils import pad_tensor
+
+    ys, cs, hs = [], [], []
     with torch.no_grad():
-        y, (c, h) = model.encode(all_inputs)
-    return (c, h)
+        for input in all_inputs:
+            y, (c, h) = model.encode(input)
+            ys.append(y[0])
+            cs.append(c)
+            hs.append(h)
+    ys, cs, hs = pad_tensor(ys)[0], torch.stack(cs), torch.stack(hs)
+    embs = torch.cat((ys, cs, hs), dim=1)
+    return embs
 
 
 def collator_fn_astnn(batch):
