@@ -1,6 +1,4 @@
-import os, torch, yaml, logging, logging.config, warnings, argparse
-import numpy as np
-
+import os, torch, yaml, logging, logging.config, warnings, argparse, numpy as np
 from datasets import load_dataset
 from utils import probe_utils
 from ast_probe.probe.utils import collator_fn_astnn, collator_fn_funcgnn
@@ -23,6 +21,7 @@ parser = argparse.ArgumentParser(
     prog="LFC Probe",
     description="LFC Probe",
 )
+
 parser.add_argument(
     "--device",
     type=str,
