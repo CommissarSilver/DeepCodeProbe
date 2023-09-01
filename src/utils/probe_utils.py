@@ -1,20 +1,40 @@
-import os, logging, pickle, torch, warnings
-from torch.utils.data import DataLoader
+# Standard Libraries
+import os
+import logging
+import warnings
+from typing import List, Tuple, Dict, Union, Callable, Any
+
+# Third-Party Libraries
+import torch
+from torch.utils.data import DataLoader, Dataset
+import pickle
 from tqdm import tqdm
 
+# Application-specific
 
-warnings.filterwarnings("ignore")
+# ------------------------
+# Constants & Configurations
+# ------------------------
 
-logger = logging.getLogger("probe")
+# Ignore Warnings
+IGNORE_WARNINGS = True
+if IGNORE_WARNINGS:
+    warnings.filterwarnings("ignore")
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Logger Configurations
+LOGGER_NAME = "probe"
+logger = logging.getLogger(LOGGER_NAME)
+
+# DEVICE Configurations
+USE_CUDA = torch.cuda.is_available()
+DEVICE = torch.DEVICE("cuda" if USE_CUDA else "cpu")
 
 
 def train_probe(
-    embedding_func: callable,
-    collator_fn: callable,
-    train_dataset: torch.utils.data.Dataset,
-    valid_dataset: torch.utils.data.Dataset,
+    embedding_func: Callable[..., Any],
+    collator_fn: Callable[..., Any],
+    train_dataset: Dataset,
+    valid_dataset: Dataset,
     batch_size: int,
     patience: int,
     probe_model: torch.nn.Module,
@@ -22,38 +42,48 @@ def train_probe(
     model_under_probe: torch.nn.Module,
     train_epochs: int,
     output_path: str,
-):
+) -> None:
     """
-    traines the probe model
+    Train a probe model.
 
-    Args:
-        embedding_func (callable): the functoin to generate the embeddings from the model under probing
-        train_dataset (torch.utils.data.Dataset): train dataset
-        valid_dataset (torch.utils.data.Dataset): test dataset
-        batch_size (int): batch_size
-        patience (int): number of epochs to wait before early stopping
-        probe_model (torch.nn.Module): the probe itself
-        probe_loss (torch.nn.Module): the loss function for the probe
-        model_under_probe (torch.nn.Module): model to be probed
-        train_epochs (int): number of training epochs
-        output_path (str): where to save the probe model and probing results
+    Parameters:
+        embedding_func (Callable): Function to generate embeddings from the model under probing.
+        collator_fn (Callable): Function for collating batches of data.
+        train_dataset (torch.utils.data.Dataset): Dataset for training.
+        valid_dataset (torch.utils.data.Dataset): Dataset for validation.
+        batch_size (int): Batch size.
+        patience (int): Number of epochs to wait before early stopping.
+        probe_model (torch.nn.Module): The probe model to be trained.
+        probe_loss (torch.nn.Module): The loss function.
+        model_under_probe (torch.nn.Module): The model that's being probed.
+        train_epochs (int): Number of training epochs.
+        output_path (str): Directory to save the trained probe model.
+
+    Returns:
+        None
     """
     train_dataloader = DataLoader(
         dataset=train_dataset,
         batch_size=batch_size,
         shuffle=True,
-        collate_fn=lambda batch: collator_fn(batch),
+        collate_fn=collator_fn,
         num_workers=0,
     )
 
+    # Using Adam optimizer with learning rate of 1e-3
     optimizer = torch.optim.Adam(probe_model.parameters(), lr=1e-3)
+    # Reduce learning rate when a metric has stopped improving.
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", factor=0.1, patience=0
+        optimizer,
+        mode="min",
+        factor=0.1,
+        patience=0,
     )
+
     criterion = probe_loss
 
-    probe_model.train()
-    model_under_probe.eval()
+    probe_model.train()  # Set the probe model to training mode
+    model_under_probe.eval()  # Set the model under probe to evaluation mode
 
     best_eval_loss = float("inf")
     metrics = {
@@ -77,17 +107,17 @@ def train_probe(
             ds, cs, us, batch_len_tokens, original_code_strings = batch
 
             embds = embedding_func(original_code_strings, model_under_probe, max_len=29)
-            # d_pred, c_pred, u_pred = probe_model(embds.permute(0, 2, 1).to(device)) #! THIS SHOULD BE TURNED ON FOR ASTNN UNTIL I FIND A FIX
-            d_pred, c_pred, u_pred = probe_model(embds.to(device))
+            # d_pred, c_pred, u_pred = probe_model(embds.permute(0, 2, 1).to(DEVICE)) #! THIS SHOULD BE TURNED ON FOR ASTNN UNTIL I FIND A FIX
+            d_pred, c_pred, u_pred = probe_model(embds.to(DEVICE))
 
             loss = criterion(
-                d_pred=d_pred.to(device),
-                c_pred=c_pred.to(device),
-                u_pred=u_pred.to(device),
-                d_real=torch.tensor(ds).to(device),
-                c_real=torch.tensor(cs).to(device),
-                u_real=torch.tensor(us).to(device),
-                length_batch=batch_len_tokens.to(device),
+                d_pred=d_pred.to(DEVICE),
+                c_pred=c_pred.to(DEVICE),
+                u_pred=u_pred.to(DEVICE),
+                d_real=torch.tensor(ds).to(DEVICE),
+                c_real=torch.tensor(cs).to(DEVICE),
+                u_real=torch.tensor(us).to(DEVICE),
+                length_batch=batch_len_tokens.to(DEVICE),
             )
 
             loss.backward()
@@ -124,22 +154,40 @@ def train_probe(
             best_eval_loss = eval_loss
         else:
             patience_count += 1
+        # Implement early stopping if validation loss doesn't improve after 'patience' epochs
         if patience_count == patience:
             logger.info("Stopping training loop (out of patience).")
             break
 
 
 def eval_probe(
-    embedding_func,
-    collator_fn,
-    eval_dataset,
-    batch_size,
-    probe_model,
-    probe_loss,
-    model_under_probe,
-):
+    embedding_func: Callable[..., Any],
+    collator_fn: Callable[..., Any],
+    eval_dataset: torch.utils.data.Dataset,
+    batch_size: int,
+    probe_model: torch.nn.Module,
+    probe_loss: torch.nn.Module,
+    model_under_probe: torch.nn.Module,
+) -> Tuple[float, float, float, float]:
+    """
+    Evaluate a probe model.
+
+    Parameters:
+        embedding_func (Callable): Function to generate embeddings from the model under probing.
+        collator_fn (Callable): Function for collating batches of data.
+        eval_dataset (torch.utils.data.Dataset): Dataset for evaluation.
+        batch_size (int): Batch size.
+        probe_model (torch.nn.Module): The probe model to be evaluated.
+        probe_loss (torch.nn.Module): The loss function.
+        model_under_probe (torch.nn.Module): The model that's being probed.
+
+    Returns:
+        Tuple[float, float, float, float]: A tuple containing the evaluation loss and three types of accuracies (D, C, U).
+    """
     probe_model.eval()
+
     eval_loss = 0.0
+
     valid_dataloader = DataLoader(
         dataset=eval_dataset,
         batch_size=batch_size,
@@ -147,6 +195,7 @@ def eval_probe(
         collate_fn=lambda batch: collator_fn(batch),
         num_workers=0,
     )
+
     d_hits_total = []
     c_hits_total = []
     u_hits_total = []
@@ -161,22 +210,23 @@ def eval_probe(
         ):
             ds, cs, us, batch_len_tokens, original_code_strings = batch
 
-            ds = ds.to(device)
-            cs = cs.to(device)
-            us = us.to(device)
+            ds = ds.to(DEVICE)
+            cs = cs.to(DEVICE)
+            us = us.to(DEVICE)
 
             embds = embedding_func(original_code_strings, model_under_probe, max_len=29)
 
-            # d_pred, c_pred, u_pred = probe_model(embds.permute(0, 2, 1).to(device)) #! THIS SHOULD BE TURNED ON FOR ASTNN UNTIL I FIND A FIX
-            d_pred, c_pred, u_pred = probe_model(embds.to(device))
+            # d_pred, c_pred, u_pred = probe_model(embds.permute(0, 2, 1).to(DEVICE)) #! THIS SHOULD BE TURNED ON FOR ASTNN UNTIL I FIND A FIX
+            d_pred, c_pred, u_pred = probe_model(embds.to(DEVICE))
+
             loss = probe_loss(
-                d_pred=d_pred.to(device),
-                c_pred=c_pred.to(device),
-                u_pred=u_pred.to(device),
-                d_real=torch.tensor(ds).to(device),
-                c_real=torch.tensor(cs).to(device),
-                u_real=torch.tensor(us).to(device),
-                length_batch=batch_len_tokens.to(device),
+                d_pred=d_pred.to(DEVICE),
+                c_pred=c_pred.to(DEVICE),
+                u_pred=u_pred.to(DEVICE),
+                d_real=torch.tensor(ds).to(DEVICE),
+                c_real=torch.tensor(cs).to(DEVICE),
+                u_real=torch.tensor(us).to(DEVICE),
+                length_batch=batch_len_tokens.to(DEVICE),
             )
 
             eval_loss += loss.item()
@@ -184,10 +234,12 @@ def eval_probe(
             d_hits, c_hits, u_hits, d_hits_len, c_hits_len = probe_loss.calculate_hits(
                 d_pred, c_pred, u_pred, ds, cs, us, batch_len_tokens
             )
+
             d_hits_total.append((d_hits, d_hits_len))
             c_hits_total.append((c_hits, c_hits_len))
             u_hits_total.append((u_hits, d_hits_len))
 
+        # Computing accuracy for 'D', 'C', and 'U' from hit counts
         total_accuracy_d = sum([x[0] for x in d_hits_total]) / sum(
             x[1] for x in d_hits_total
         )
