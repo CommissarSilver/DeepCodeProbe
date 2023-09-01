@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser(
     prog="LFC Probe",
     description="LFC Probe",
 )
-
+#### Arguemnt Parser ####
 parser.add_argument(
     "--device",
     type=str,
@@ -78,9 +78,8 @@ parser.add_argument(
     default=200,
     help="Hidden dimension of the probe",
 )
-
 args = parser.parse_args()
-
+#### Arguemnt Parser ####
 device = args.device
 
 if args.model == "ast_nn":
