@@ -27,7 +27,7 @@ logger = logging.getLogger(LOGGER_NAME)
 
 # DEVICE Configurations
 USE_CUDA = torch.cuda.is_available()
-DEVICE = torch.DEVICE("cuda" if USE_CUDA else "cpu")
+DEVICE = torch.device("cuda" if USE_CUDA else "cpu")
 
 
 def train_probe(
