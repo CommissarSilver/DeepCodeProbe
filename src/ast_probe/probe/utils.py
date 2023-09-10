@@ -67,6 +67,13 @@ def get_embeddings_sum_tf(all_inputs, model, **kwargs):
     return embs
 
 
+def get_embeddings_code_sum_drl(all_inputs, model, **kwargs):
+    with torch.no_grad():
+        embs = model.initialize(all_inputs, False)[1][3]
+
+    return embs
+
+
 def collator_fn_astnn(batch):
     """
     collator function for ASTNN
@@ -170,3 +177,7 @@ def collator_fn_sum_tf(batch):
         torch.tensor(batch_len_tokens),
         tree_tensors,
     )
+
+
+def collator_fun_code_sum_drl(batch):
+    pass
