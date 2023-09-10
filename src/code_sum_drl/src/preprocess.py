@@ -68,7 +68,7 @@ def get_opt():
     )
     parser.add_argument(
         "-save_data",
-        default=f"{Working_path}/dataset/train/processed_all",
+        default=f"{Working_path}/dataset/train/processed_all_new",
         help="Output file for the prepared data",
     )
     parser.add_argument(
@@ -106,6 +106,7 @@ def makeData(which, srcFile, tgtFile, srcDicts, tgtDicts):
     src, tgt, trees = [], [], []
     code_sentences, comment_sentences = [], []
     sizes = []
+    original_codes, original_comments = [], []
     ignored, exceps = 0, 0
 
     print("Processing %s & %s ..." % (srcFile, tgtFile))
@@ -115,6 +116,8 @@ def makeData(which, srcFile, tgtFile, srcDicts, tgtDicts):
     while True:
         sline = srcF.readline().strip()
         tline = tgtF.readline().strip()
+        orginal_sline = sline
+        original_comment = tline
 
         # source or target does not have same number of lines
         if sline == "" or tline == "":
@@ -175,6 +178,8 @@ def makeData(which, srcFile, tgtFile, srcDicts, tgtDicts):
                         tgtLine, Constants.UNK_WORD, eosWord=Constants.EOS_WORD
                     )
                 ]
+                original_codes += [orginal_sline]
+                original_comments += [original_comment]
                 sizes += [len(src)]
             except Exception as e:
                 print("Exception: ", e)
@@ -203,16 +208,34 @@ def makeData(which, srcFile, tgtFile, srcDicts, tgtDicts):
     print(
         ("Prepared %d sentences " + "(%d ignored due to Exception)") % (len(src), exceps)
     )
-    return src, tgt, trees, code_sentences, comment_sentences
+    return (
+        src,
+        tgt,
+        trees,
+        code_sentences,
+        comment_sentences,
+        original_codes,
+        original_comments,
+    )
 
 
 def makeDataGeneral(which, src_path, tgt_path, dicts):
     print("Preparing " + which + "...")
     res = {}
-    res["src"], res["tgt"], res["trees"], code_sentences, comment_sentences = makeData(
-        which, src_path, tgt_path, dicts["src"], dicts["tgt"]
+    (
+        res["src"],
+        res["tgt"],
+        res["trees"],
+        code_sentences,
+        comment_sentences,
+        res["original_codes"],
+        res["original_comments"],
+    ) = makeData(which, src_path, tgt_path, dicts["src"], dicts["tgt"])
+    return (
+        res,
+        code_sentences,
+        comment_sentences,
     )
-    return res, code_sentences, comment_sentences
 
 
 def main():
