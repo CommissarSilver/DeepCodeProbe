@@ -25,13 +25,13 @@ parser.add_argument(
     type=str,
     help="Model to probe",
     choices=["ast_nn", "funcgnn", "code_sum_drl", "sum_tf", "cscg_dual"],
-    default="sum_tf",
+    default="code_sum_drl",
 )
 parser.add_argument(
     "--dataset_path",
     type=str,
     help="Path to the dataset - Path follows the format /model_name/dataset",
-    default=os.path.join(os.getcwd(), "src", "summarization_tf", "dataset"),
+    default=os.path.join(os.getcwd(), "src", "code_sum_drl", "dataset"),
 )
 parser.add_argument(
     "--language",
@@ -69,7 +69,7 @@ parser.add_argument(
     type=int,
     default=512,
     choices=[200, 512],
-    help="Hidden dimension of the probe. 200 for FuncGnn, 512 for SumTF",
+    help="Hidden dimension of the probe. 200 for FuncGnn, 512 for SumTF, 512 for CodeSumDRL",
 )
 args = parser.parse_args()
 #### Arguemnt Parser ####
@@ -284,7 +284,6 @@ elif args.model == "funcgnn":
         output_path=os.path.join(os.getcwd(), "results", "funcgnn"),
     )
 
-
 elif args.model == "sum_tf":
     import pandas as pd
     from torch.utils.data import Dataset
@@ -408,3 +407,183 @@ elif args.model == "sum_tf":
     # first, we need to call each code instance and get the original repr of it to feed to the model
     # second, for each of these call the encode function of the model to get the embeddings
     # send them to the probe to be investigated
+
+elif args.model == "code_sum_drl":
+    import pandas as pd
+
+    from torch.utils.data import Dataset
+    from code_sum_drl.src.code_to_repr import code_to_index
+    from code_sum_drl.src.code_to_repr import Dataset as CodeSumDataset
+    import sys
+
+    sys.path.append("/Users/ahura/Nexus/Leto/src/code_sum_drl/src")
+    import lib
+    from lib.data.Tree import *
+
+    from ast_probe.probe import (
+        CodeSumDRLarserProbe,
+        ParserLossCodeSumDRL,
+        get_embeddings_code_sum_drl,
+    )
+
+    opt = argparse.ArgumentParser()
+    opt.add_argument(
+        "-rnn_size", type=int, default=512, help="Size of LSTM hidden states,"
+    )
+    opt.add_argument(
+        "-word_vec_size",
+        type=int,
+        default=512,
+        help="Word embedding sizes",
+    )
+    opt.add_argument(
+        "-brnn",
+        action="store_true",
+        help="Use a bidirectional encoder",
+    )
+    opt.add_argument(
+        "-gpus",
+        default=[],
+        nargs="+",
+        type=int,
+        help="Use CUDA on the listed devices.",
+    )
+    opt.add_argument(
+        "-layers",
+        type=int,
+        default=1,
+        help="Number of layers in the LSTM encoder/decoder",
+    )
+    opt.add_argument(
+        "-dropout",
+        type=float,
+        default=0.3,
+        help="Dropout probability; applied between LSTM stacks.",
+    )
+    opt.add_argument(
+        "-input_feed",
+        type=int,
+        default=1,
+        help="""Feed the context vector at each time step as
+                        additional input (via concatenation with the word embeddings) to the decoder.""",
+    )
+    opt.add_argument(
+        "-has_attn",
+        type=int,
+        default=1,
+        help="""attn model or not""",
+    )
+    opt.add_argument(
+        "-cuda",
+        type=bool,
+        default=False,
+        help="""attn model or not""",
+    )
+    # opt.cuda = False
+    opt = opt.parse_args()
+
+    dataset = torch.load(
+        "/Users/ahura/Nexus/Leto/src/code_sum_drl/dataset/train/processed_all_new.train.pt"
+    )
+
+    def get_data_trees(trees):
+        data_trees = []
+        for t_json in trees:
+            for k, node in t_json.items():
+                if node["parent"] == None:
+                    root_idx = k
+            tree = json2tree_binary(t_json, Tree(), root_idx)
+            data_trees.append(tree)
+
+        return data_trees
+
+    def get_data_leafs(trees, srcDicts):
+        leafs = []
+        for tree in trees:
+            leaf_contents = tree.leaf_contents()
+
+            leafs.append(srcDicts.convertToIdx(leaf_contents, Constants.UNK_WORD))
+        return leafs
+
+    dicts = dataset["dicts"]
+    dataset["train_xe"]["trees"] = get_data_trees(dataset["train_xe"]["trees"])
+    dataset["train_pg"]["trees"] = get_data_trees(dataset["train_pg"]["trees"])
+    dataset["valid"]["trees"] = get_data_trees(dataset["valid"]["trees"])
+    dataset["test"]["trees"] = get_data_trees(dataset["test"]["trees"])
+
+    dataset["train_xe"]["leafs"] = get_data_leafs(
+        dataset["train_xe"]["trees"],
+        dicts["src"],
+    )
+    dataset["train_pg"]["leafs"] = get_data_leafs(
+        dataset["train_pg"]["trees"],
+        dicts["src"],
+    )
+    dataset["valid"]["leafs"] = get_data_leafs(
+        dataset["valid"]["trees"],
+        dicts["src"],
+    )
+    dataset["test"]["leafs"] = get_data_leafs(
+        dataset["test"]["trees"],
+        dicts["src"],
+    )
+
+    train_set = CodeSumDataset(
+        dataset["train_xe"],
+        args.batch_size,
+        False,
+        eval=False,
+    )
+    valid_set = CodeSumDataset(
+        dataset["valid"],
+        args.batch_size,
+        False,
+        eval=True,
+    )
+    test_set = CodeSumDataset(
+        dataset["test"],
+        args.batch_size,
+        False,
+        eval=True,
+    )
+    max_d, max_c, max_u = 0, 0, 0
+
+    for i in range(len(train_set)):
+        batch = train_set[i]
+        ds = [dcu["d"] for dcu in batch[6]]
+        cs = [dcu["c"] for dcu in batch[6]]
+        us = [dcu["u"] for dcu in batch[6]]
+        max_d = max(max_d, max([len(d) for d in ds]))
+        max_c = max(max_c, max([len(c) for c in cs]))
+        max_u = max(max_u, max([len(u) for u in us]))
+    
+    print("mac D: ", max_d)
+    print("mac C: ", max_c)
+    print("mac U: ", max_u)
+
+    code_encoder = lib.TreeEncoder(opt, dicts["src"])
+    text_encoder = lib.Encoder(opt, dicts["src"])
+    decoder = lib.HybridDecoder(opt, dicts["tgt"])
+    generator = lib.BaseGenerator(torch.nn.Linear(opt.rnn_size, dicts["tgt"].size()), opt)
+    model = lib.Hybrid2SeqModel(code_encoder, text_encoder, decoder, generator, opt)
+
+    probe_model = CodeSumDRLarserProbe(
+        probe_rank=args.probe_rank,
+        hidden_dim=args.probe_hidden_dim,
+        number_labels_d=max_d,
+        number_labels_c=max_c,
+        number_labels_u=max_u,
+    ).to(device)
+
+    probe_utils.train_probe_code_sum_drl(
+        embedding_func=get_embeddings_code_sum_drl,
+        train_dataset=train_set,
+        valid_dataset=test_set,
+        batch_size=args.batch_size,
+        patience=args.patience,
+        probe_model=probe_model,
+        probe_loss=ParserLossCodeSumDRL(),
+        model_under_probe=model,
+        train_epochs=args.train_epochs,
+        output_path=os.path.join(os.getcwd(), "results", "funcgnn"),
+    )
