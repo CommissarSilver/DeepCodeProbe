@@ -6,7 +6,11 @@ from torch.nn.utils.rnn import pad_packed_sequence as unpack
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 import gensim
 import numpy as np
-import lib
+
+try:
+    import lib
+except ImportError:
+    import code_sum_drl.src.lib as lib
 import sys
 import re
 

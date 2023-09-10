@@ -6,7 +6,10 @@ import random
 import torch
 from torch.autograd import Variable
 
-import lib
+try:
+    import lib
+except ImportError:
+    import code_sum_drl.src.lib as lib
 
 
 class Dataset(object):
