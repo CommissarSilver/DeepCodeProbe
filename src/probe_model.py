@@ -24,14 +24,14 @@ parser.add_argument(
     "--model",
     type=str,
     help="Model to probe",
-    choices=["ast_nn", "funcgnn", "code_sum_drl", "sum_tf", "cscg_dual"],
-    default="code_sum_drl",
+    choices=["ast_nn", "funcgnn", "code_sum_drl", "summarization_tf", "cscg_dual"],
+    default="summarization_tf",
 )
 parser.add_argument(
     "--dataset_path",
     type=str,
     help="Path to the dataset - Path follows the format /model_name/dataset",
-    default=os.path.join(os.getcwd(), "src", "code_sum_drl", "dataset"),
+    default=os.path.join(os.getcwd(), "src", "summarization_tf", "dataset"),
 )
 parser.add_argument(
     "--language",
@@ -284,7 +284,7 @@ elif args.model == "funcgnn":
         output_path=os.path.join(os.getcwd(), "results", "funcgnn"),
     )
 
-elif args.model == "sum_tf":
+elif args.model == "summarization_tf":
     import pandas as pd
     from torch.utils.data import Dataset
 
@@ -315,9 +315,9 @@ elif args.model == "sum_tf":
         "test": os.path.join(args.dataset_path, "test.json"),
     }
 
-    train_set = load_dataset("json", data_files=data_files, split="train")
-    valid_set = load_dataset("json", data_files=data_files, split="valid")
-    test_set = load_dataset("json", data_files=data_files, split="test")
+    train_set = load_dataset("json", data_files=data_files, split="train[:128]")
+    valid_set = load_dataset("json", data_files=data_files, split="valid[:128]")
+    test_set = load_dataset("json", data_files=data_files, split="test[:128]")
 
     train_set_processed = [
         code_to_index(i["code"], i["nl"], idx) for idx, i in enumerate(train_set)
@@ -556,7 +556,7 @@ elif args.model == "code_sum_drl":
         max_d = max(max_d, max([len(d) for d in ds]))
         max_c = max(max_c, max([len(c) for c in cs]))
         max_u = max(max_u, max([len(u) for u in us]))
-    
+
     print("mac D: ", max_d)
     print("mac C: ", max_c)
     print("mac U: ", max_u)
