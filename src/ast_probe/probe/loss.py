@@ -2,16 +2,6 @@ import torch
 import torch.nn as nn
 
 
-class LossFunc(nn.Module):
-    """each loss function should be a subclass of this class
-
-    Args:
-        nn (_type_): _description_
-    """
-
-    pass
-
-
 class ParserLoss(nn.Module):
     """
     Loss function for AST-NN
@@ -98,6 +88,7 @@ class ParserLoss(nn.Module):
             u_hits,
             (length_batch * d_pred.size(1)),
             (length_batch * c_pred.size(1) * c_pred.size(2)),
+            (length_batch * u_pred.size(1)),
         )
 
 
@@ -203,6 +194,7 @@ class ParserLossFuncGNN(nn.Module):
             u_hits,
             (length_batch * d_pred.size(1)),
             (length_batch * c_pred.size(1) * c_pred.size(2)),
+            (length_batch * u_pred.size(1)),
         )
 
 
@@ -281,33 +273,29 @@ class ParserLossSumTF(nn.Module):
             _type_: the number of correct predictions for d,c,u
         """
         if d_real.shape[1] != d_pred.shape[1]:
-            padding_size = d_pred.shape[1] - d_real.shape[1]
-            d_real = torch.nn.functional.pad(d_real, (0, padding_size), value=-1)
-
+            num_elements = d_pred.shape[1] - d_real.shape[1]
+            fill_tensor = torch.full((d_real.size(0), num_elements, 2), -1)
+            d_real = torch.cat((d_real, fill_tensor), dim=1)
+        # same goes for cs
         if c_pred.shape[1] != c_real.shape[1]:
-            num_elements = c_pred.shape[1] - c_real.shape[1]
-            fill_tensor = torch.full((c_real.size(0), num_elements, 2), -1)
-            c_real = torch.cat((c_real, fill_tensor), dim=1)
-
+            padding_size = c_pred.shape[1] - c_real.shape[1]
+            c_real = torch.nn.functional.pad(c_real, (0, padding_size), value=-1)
+        # same goes for us
         if u_real.shape[1] != u_pred.shape[1]:
             padding_size = u_pred.shape[1] - u_real.shape[1]
             u_real = torch.nn.functional.pad(u_real, (0, padding_size), value=-1)
 
         d_hits = torch.round(d_pred).eq(d_real).sum().item()
-        u_hits = torch.round(u_pred).eq(u_real).sum().item()
-
-        if c_pred.shape[2] != c_real.shape[2]:
-            num_elements = c_pred.shape[2] - c_real.shape[2]
-            fill_tensor = torch.full((c_real.size(0), c_real.size(1), num_elements), -1)
-            c_real = torch.cat((c_real, fill_tensor), dim=2)
         c_hits = torch.round(c_pred).eq(c_real).sum().item()
+        u_hits = torch.round(u_pred).eq(u_real).sum().item()
 
         return (
             d_hits,
             c_hits,
             u_hits,
-            (length_batch * d_pred.size(1)),
-            (length_batch * c_pred.size(1) * c_pred.size(2)),
+            (length_batch * d_pred.size(1) * d_pred.size(2)),
+            (length_batch * c_pred.size(1)),
+            (length_batch * u_pred.size(1)),
         )
 
 
@@ -358,7 +346,7 @@ class ParserLossCodeSumDRL(nn.Module):
         return loss_d + loss_c + loss_u
 
     @staticmethod
-    def calculate_hits(d_pred, c_pred, u_pred, d_real, c_real, u_real, length_batch):
+    def calculate_hits(d_pred, c_pred, u_pred, d_real, c_real, u_real):
         """
         calculates the number of correct predictions of the probe by comparing the predictions with the real values.
         to calculate the number of hits I'm using round function. if the predicted value is 1.1 and the real value is 1, torch.round(1.1) will return 1.
@@ -376,32 +364,20 @@ class ParserLossCodeSumDRL(nn.Module):
         Returns:
             _type_: the number of correct predictions for d,c,u
         """
-        if d_real.shape[1] != d_pred.shape[1]:
-            padding_size = d_pred.shape[1] - d_real.shape[1]
-            d_real = torch.nn.functional.pad(d_real, (0, padding_size), value=-1)
 
-        if c_pred.shape[1] != c_real.shape[1]:
-            num_elements = c_pred.shape[1] - c_real.shape[1]
-            fill_tensor = torch.full((c_real.size(0), num_elements, 2), -1)
-            c_real = torch.cat((c_real, fill_tensor), dim=1)
-
-        if u_real.shape[1] != u_pred.shape[1]:
-            padding_size = u_pred.shape[1] - u_real.shape[1]
-            u_real = torch.nn.functional.pad(u_real, (0, padding_size), value=-1)
+        d_real = torch.tensor([d + [-1] * (d_pred.shape[1] - len(d)) for d in d_real])
+        c_real = torch.tensor([c + [-1] * (c_pred.shape[1] - len(c)) for c in c_real])
+        u_real = torch.tensor([u + [-1] * (u_pred.shape[1] - len(u)) for u in u_real])
 
         d_hits = torch.round(d_pred).eq(d_real).sum().item()
-        u_hits = torch.round(u_pred).eq(u_real).sum().item()
-
-        if c_pred.shape[2] != c_real.shape[2]:
-            num_elements = c_pred.shape[2] - c_real.shape[2]
-            fill_tensor = torch.full((c_real.size(0), c_real.size(1), num_elements), -1)
-            c_real = torch.cat((c_real, fill_tensor), dim=2)
         c_hits = torch.round(c_pred).eq(c_real).sum().item()
+        u_hits = torch.round(u_pred).eq(u_real).sum().item()
 
         return (
             d_hits,
             c_hits,
             u_hits,
-            (length_batch * d_pred.size(1)),
-            (length_batch * c_pred.size(1) * c_pred.size(2)),
+            d_pred.size(0) * d_pred.size(1),
+            c_real.size(0) * c_real.size(1),
+            u_real.size(0) * u_real.size(1),
         )
