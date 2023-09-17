@@ -24,19 +24,19 @@ parser.add_argument(
     "--model",
     type=str,
     help="Model to probe",
-    choices=["ast_nn", "funcgnn", "code_sum_drl", "summarization_tf", "cscg_dual"],
-    default="summarization_tf",
+    choices=["ast_nn", "funcgnn", "summarization_tf", "code_sum_drl", "cscg_dual"],
+    default="code_sum_drl",
 )
 parser.add_argument(
     "--dataset_path",
     type=str,
     help="Path to the dataset - Path follows the format /model_name/dataset",
-    default=os.path.join(os.getcwd(), "src", "summarization_tf", "dataset"),
+    default=os.path.join(os.getcwd(), "src", "code_sum_drl", "dataset"),
 )
 parser.add_argument(
     "--language",
     type=str,
-    help="Language of the dataset",
+    help="Language of the dataset. Only for AST-NN",
     choices=["java", "c"],
     default="c",
 )
@@ -61,8 +61,9 @@ parser.add_argument(
 parser.add_argument(
     "--probe_rank",
     type=int,
-    default=128,
-    help="Rank of the probe",
+    default=512,
+    choices=[128, 512],
+    help="Rank of the probe. 128 for AST-NN and FuncGNN, 512 for SumTF and CodeSumDRL",
 )
 parser.add_argument(
     "--probe_hidden_dim",
@@ -206,13 +207,14 @@ if args.model == "ast_nn":
         collator_fn=collator_fn_astnn,
         train_dataset=train_set,
         valid_dataset=valid_set,
+        test_dataset=test_set,
         batch_size=args.batch_size,
         patience=args.patience,
         probe_model=probe_model,
         probe_loss=ParserLoss(max_c_len=max_c_len),
         model_under_probe=model_to_probe,
         train_epochs=args.train_epochs,
-        output_path=os.path.join(os.getcwd(), "results", "astnn"),
+        output_path=os.path.join(os.getcwd(), "src", "probe_models", args.model),
     )
 
 elif args.model == "funcgnn":
@@ -242,6 +244,16 @@ elif args.model == "funcgnn":
         ],
     }
 
+    #!-- this part was required to rename the original files of FuncGNN as they are separated by :::: which is not a valid character in file names
+    #! it should only be run once
+    # for file in list(data_files["train"]):
+    #     new_name = file.replace("::::", "___")
+    #     os.rename(file, new_name)
+    # for file in list(data_files["test"]):
+    #     new_name = file.replace("::::", "___")
+    #     os.rename(file, new_name)
+    #!-- this part was required to rename the original files of FuncGNN as they are separated by :::: which is not a valid character in file names
+
     train_set = load_dataset("json", data_files=data_files, split="train")
     test_set = load_dataset("json", data_files=data_files, split="test")
 
@@ -260,6 +272,11 @@ elif args.model == "funcgnn":
     funcgnn_param_parser = parameter_parser()
     funcgnn_trainer = funcGNNTrainer(funcgnn_param_parser)
     model_to_probe = funcgnn_trainer.model
+    model_to_probe.load_state_dict(
+        torch.load(
+            os.path.join(os.getcwd(), "src", args.model, "models", "model_state.pth")
+        )
+    )
 
     # the embeddings of FuncGNN are of shape 64, probe_rank is still 128
     probe_model = FuncGNNParserProbe(
@@ -275,13 +292,14 @@ elif args.model == "funcgnn":
         collator_fn=collator_fn_funcgnn,
         train_dataset=train_set,
         valid_dataset=test_set,
+        test_dataset=test_set,
         batch_size=args.batch_size,
         patience=args.patience,
         probe_model=probe_model,
         probe_loss=ParserLossFuncGNN(max_c_len=max_c_len_train),
         model_under_probe=model_to_probe,
         train_epochs=args.train_epochs,
-        output_path=os.path.join(os.getcwd(), "results", "funcgnn"),
+        output_path=os.path.join(os.getcwd(), "src", "probe_models", args.model),
     )
 
 elif args.model == "summarization_tf":
@@ -315,9 +333,9 @@ elif args.model == "summarization_tf":
         "test": os.path.join(args.dataset_path, "test.json"),
     }
 
-    train_set = load_dataset("json", data_files=data_files, split="train[:128]")
-    valid_set = load_dataset("json", data_files=data_files, split="valid[:128]")
-    test_set = load_dataset("json", data_files=data_files, split="test[:128]")
+    train_set = load_dataset("json", data_files=data_files, split="train")
+    valid_set = load_dataset("json", data_files=data_files, split="valid")
+    test_set = load_dataset("json", data_files=data_files, split="test")
 
     train_set_processed = [
         code_to_index(i["code"], i["nl"], idx) for idx, i in enumerate(train_set)
@@ -378,6 +396,17 @@ elif args.model == "summarization_tf":
         lr=0.001,
         layer=1,
     )
+    model.load_state_dict(
+        torch.load(
+            os.path.join(
+                os.getcwd(),
+                "src",
+                args.model,
+                "models",
+                "model_state.pth",
+            )
+        )
+    )
 
     train_set = CustomDataset(train_set)
     test_set = CustomDataset(test_set)
@@ -395,18 +424,16 @@ elif args.model == "summarization_tf":
         embedding_func=get_embeddings_sum_tf,
         collator_fn=collator_fn_sum_tf,
         train_dataset=train_set,
-        valid_dataset=test_set,
+        valid_dataset=valid_set,
+        test_dataset=test_set,
         batch_size=args.batch_size,
         patience=args.patience,
         probe_model=probe_model,
         probe_loss=ParserLossSumTF(max_c_len=max_c_len_train),
         model_under_probe=model,
         train_epochs=args.train_epochs,
-        output_path=os.path.join(os.getcwd(), "results", "funcgnn"),
+        output_path=os.path.join(os.getcwd(), "src", "probe_models", args.model),
     )
-    # first, we need to call each code instance and get the original repr of it to feed to the model
-    # second, for each of these call the encode function of the model to get the embeddings
-    # send them to the probe to be investigated
 
 elif args.model == "code_sum_drl":
     import pandas as pd
@@ -553,19 +580,33 @@ elif args.model == "code_sum_drl":
         ds = [dcu["d"] for dcu in batch[6]]
         cs = [dcu["c"] for dcu in batch[6]]
         us = [dcu["u"] for dcu in batch[6]]
+
         max_d = max(max_d, max([len(d) for d in ds]))
         max_c = max(max_c, max([len(c) for c in cs]))
         max_u = max(max_u, max([len(u) for u in us]))
 
-    print("mac D: ", max_d)
-    print("mac C: ", max_c)
-    print("mac U: ", max_u)
+    #! No longer required
+    # print("mac D: ", max_d)
+    # print("mac C: ", max_c)
+    # print("mac U: ", max_u)
 
     code_encoder = lib.TreeEncoder(opt, dicts["src"])
     text_encoder = lib.Encoder(opt, dicts["src"])
     decoder = lib.HybridDecoder(opt, dicts["tgt"])
     generator = lib.BaseGenerator(torch.nn.Linear(opt.rnn_size, dicts["tgt"].size()), opt)
     model = lib.Hybrid2SeqModel(code_encoder, text_encoder, decoder, generator, opt)
+
+    # checkpoint = torch.load(
+    #     os.path.join(
+    #         os.getcwd(),
+    #         "src",
+    #         args.model,
+    #         "models",
+    #         "model_state.pt",
+    #     ),
+    #     map_location=torch.device("cpu"),
+    # )
+    # model = checkpoint["model"]
 
     probe_model = CodeSumDRLarserProbe(
         probe_rank=args.probe_rank,
@@ -578,12 +619,13 @@ elif args.model == "code_sum_drl":
     probe_utils.train_probe_code_sum_drl(
         embedding_func=get_embeddings_code_sum_drl,
         train_dataset=train_set,
-        valid_dataset=test_set,
+        valid_dataset=valid_set,
+        test_dataset=test_set,
         batch_size=args.batch_size,
         patience=args.patience,
         probe_model=probe_model,
         probe_loss=ParserLossCodeSumDRL(),
         model_under_probe=model,
         train_epochs=args.train_epochs,
-        output_path=os.path.join(os.getcwd(), "results", "funcgnn"),
+        output_path=os.path.join(os.getcwd(), "src", "probe_models", args.model),
     )
