@@ -64,6 +64,12 @@ def get_embeddings_sum_tf(all_inputs, model, **kwargs):
             hs.append(h)
     ys, cs, hs = pad_tensor(ys)[0], torch.stack(cs), torch.stack(hs)
     embs = torch.cat((ys, cs, hs), dim=1)
+    # # Create a zero tensor with the shape of the padding needed
+    # #! SUM-TF uses 96 as the max length of the code
+    # zero_padding = torch.zeros((embs.shape[0], 96 - embs.shape[1], embs.shape[2]))
+
+    # # Concatenate zero tensor to the original tensor along the second dimension
+    # embs = torch.cat((embs, zero_padding), dim=1)
     return embs
 
 
@@ -71,6 +77,8 @@ def get_embeddings_code_sum_drl(all_inputs, model, **kwargs):
     with torch.no_grad():
         embs = model.initialize(all_inputs, False)[1][3]
 
+    # zero_padding = torch.zeros((embs.shape[0], 141 - embs.shape[1], embs.shape[2]))
+    # embs = torch.cat((embs, zero_padding), dim=1)
     return embs
 
 
