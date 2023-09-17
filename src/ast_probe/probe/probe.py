@@ -71,7 +71,7 @@ class ParserProbe(Probe):
             scores_c: (batch_size, max_seq_len - 1, number classes_c)
             scores_u: (batch_size, max_seq_len, number classes_u)
         """
-        transformed = torch.matmul(batch, self.proj)
+        transformed = torch.matmul(batch.permute(0, 2, 1), self.proj)
 
         ds_pred = torch.matmul(transformed, self.vectors_d)
         cs_pred = torch.matmul(transformed, self.vectors_c)
@@ -179,13 +179,19 @@ class SumTFParserProbe(Probe):
         self.proj = nn.Parameter(data=torch.zeros(self.hidden_dim, self.probe_rank))
         nn.init.uniform_(self.proj, -0.05, 0.05)
         # second projection exclusive to the ds
-        self.vectors_d = nn.Parameter(data=torch.zeros(self.probe_rank, 2))
+        self.vectors_d = nn.Parameter(
+            data=torch.zeros(self.probe_rank, self.number_vectors_d * 2)
+        )
         nn.init.uniform_(self.vectors_d, -0.05, 0.05)
         # third projections to be used for the cs
-        self.vectors_c = nn.Parameter(data=torch.zeros(self.probe_rank))
+        self.vectors_c = nn.Parameter(
+            data=torch.zeros(self.probe_rank, self.number_vectors_c)
+        )
         nn.init.uniform_(self.vectors_c, -0.05, 0.05)
         # fourth projection to be used for us
-        self.vectors_u = nn.Parameter(data=torch.zeros(self.probe_rank))
+        self.vectors_u = nn.Parameter(
+            data=torch.zeros(self.probe_rank, self.number_vectors_u)
+        )
         nn.init.uniform_(self.vectors_u, -0.05, 0.05)
 
     def forward(self, batch):
@@ -199,13 +205,15 @@ class SumTFParserProbe(Probe):
             scores_c: (batch_size, max_seq_len - 1, number classes_c)
             scores_u: (batch_size, max_seq_len, number classes_u)
         """
-        transformed = torch.matmul(batch, self.proj)
+        tansformerd_pooled = torch.mean(batch, dim=1)
+        # transformed = torch.matmul(batch, self.proj)
 
-        ds_pred = torch.matmul(transformed, self.vectors_d)
+        ds_pred = torch.matmul(tansformerd_pooled, self.vectors_d)
+        ds_pred = ds_pred.view(ds_pred.shape[0], self.number_vectors_d, 2)
 
-        cs_pred = torch.matmul(transformed, self.vectors_c)
+        cs_pred = torch.matmul(tansformerd_pooled, self.vectors_c)
 
-        us_pred = torch.matmul(transformed, self.vectors_u)
+        us_pred = torch.matmul(tansformerd_pooled, self.vectors_u)
 
         return (ds_pred, cs_pred, us_pred)
 
@@ -264,9 +272,8 @@ class CodeSumDRLarserProbe(Probe):
             scores_c: (batch_size, max_seq_len - 1, number classes_c)
             scores_u: (batch_size, max_seq_len, number classes_u)
         """
-        transformed = torch.matmul(batch, self.proj)
 
-        tansformerd_pooled = torch.mean(transformed, dim=1)
+        tansformerd_pooled = torch.mean(batch, dim=1)
 
         ds_pred = torch.matmul(tansformerd_pooled, self.vectors_d)
 
