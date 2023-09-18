@@ -113,7 +113,6 @@ def train_probe(
             ds, cs, us, batch_len_tokens, original_code_strings = batch
 
             embds = embedding_func(original_code_strings, model_under_probe, max_len=29)
-            # d_pred, c_pred, u_pred = probe_model(embds.permute(0, 2, 1).to(DEVICE)) #! THIS SHOULD BE TURNED ON FOR ASTNN UNTIL I FIND A FIX
             d_pred, c_pred, u_pred = probe_model(embds.to(DEVICE))
 
             loss = criterion(
@@ -196,7 +195,7 @@ def train_probe(
         "test_f1": None,
     }
     with open(os.path.join(output_path, "test_metrics.json"), "w") as f:
-        json.dump(metrics, f)
+        json.dump(test_metrics, f)
 
 
 def eval_probe(
@@ -243,7 +242,7 @@ def eval_probe(
         for step, batch in enumerate(
             tqdm(
                 valid_dataloader,
-                desc="Testing  probe",
+                desc="Testing probe",
                 bar_format="{desc:<10}{percentage:3.0f}%|{bar:100}{r_bar}",
             )
         ):

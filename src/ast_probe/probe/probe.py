@@ -47,7 +47,6 @@ class ParserProbe(Probe):
         # first projection. aim here is to project the intermediate inputs to the probe rank
         self.proj = nn.Parameter(data=torch.zeros(self.hidden_dim, self.probe_rank))
         nn.init.uniform_(self.proj, -0.05, 0.05)
-        #! add self.vectors_d for distance here later
         # second projection exclusive to the ds
         self.vectors_d = nn.Parameter(data=torch.zeros(self.probe_rank))
         nn.init.uniform_(self.vectors_d, -0.05, 0.05)
