@@ -1,6 +1,10 @@
-import networkx as nx
+# Python Standard Libraries
+import os
+
+# Third-Party Libraries
 import javalang
 from javalang.ast import Node
+import networkx as nx
 import numpy as np
 from gensim.models.word2vec import Word2Vec
 
@@ -30,7 +34,15 @@ def ast_to_index(tree, language):
             from ast_nn.src.prepare_data import get_blocks as func
 
         word2vec = Word2Vec.load(
-            "/Users/ahura/Nexus/Leto/src/ast_nn/dataset/c/embeddings/node_w2v_128"
+            os.path.join(
+                os.getcwd(),
+                "src",
+                "ast_nn",
+                "dataset",
+                "c",
+                "embeddings",
+                "node_w2v_128",
+            )
         ).wv
         vocab = word2vec
         max_token = word2vec.vectors.shape[0]
@@ -39,7 +51,15 @@ def ast_to_index(tree, language):
             from utils import get_blocks_v1 as func
 
             word2vec = Word2Vec.load(
-                "/Users/ahura/Nexus/Leto/src/ast_nn/dataset/java/embeddings/node_w2v_128"
+                os.path.join(
+                    os.getcwd(),
+                    "src",
+                    "ast_nn",
+                    "dataset",
+                    "java",
+                    "embeddings",
+                    "node_w2v_128",
+                )
             ).wv
             vocab = word2vec
             max_token = word2vec.vectors.shape[0]
@@ -97,8 +117,22 @@ def code_to_index(code, language):
 
 
 if __name__ == "__main__":
-    x = code_to_index(
-        "public static void pipe(InputStream in, OutputStream out) throws IOException {\n        byte[] buf = new byte[4096];\n        int n;\n        while ((n = in.read(buf, 0, buf.length)) >= 0) out.write(buf, 0, n);\n    }\n",
-        "c",
-    )
-    print(x)
+    # Define Test Cases
+    c_code_sample = "int main() { return 0; }"
+    java_code_sample = "public static void main(String[] args) { }"
+
+    # Test 1: C Language
+    c_output = code_to_index(c_code_sample, "c")
+    assert c_output is not None, "Test 1 Failed: C language output is None"
+    assert (
+        "d" in c_output and "c" in c_output and "u" in c_output
+    ), "Test 1 Failed: C language output lacks required keys"
+
+    # Test 2: Java Language
+    java_output = code_to_index(java_code_sample, "java")
+    assert java_output is not None, "Test 2 Failed: Java language output is None"
+    assert (
+        "d" in java_output and "c" in java_output and "u" in java_output
+    ), "Test 2 Failed: Java language output lacks required keys"
+
+    print("\033[32m All tests passed.\033[0m")
