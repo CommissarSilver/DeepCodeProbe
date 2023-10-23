@@ -19,3 +19,5 @@ src/summarization_tf/checkpoints/*
 models
 results/*
 
+*/models_from_halcon/*
+models_from_halcon/
