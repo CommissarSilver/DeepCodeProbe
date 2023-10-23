@@ -69,8 +69,8 @@ parser.add_argument(
     "--probe_hidden_dim",
     type=int,
     default=512,
-    choices=[200, 512],
-    help="Hidden dimension of the probe. 200 for FuncGnn, 512 for SumTF, 512 for CodeSumDRL",
+    choices=[200, 64, 512],
+    help="Hidden dimension of the probe. 200 for AST-NN. 64 for FuncGnn, 512 for SumTF, 512 for CodeSumDRL",
 )
 args = parser.parse_args()
 #### Arguemnt Parser ####
@@ -272,6 +272,7 @@ elif args.model == "funcgnn":
     funcgnn_param_parser = parameter_parser()
     funcgnn_trainer = funcGNNTrainer(funcgnn_param_parser)
     model_to_probe = funcgnn_trainer.model
+
     model_to_probe.load_state_dict(
         torch.load(
             os.path.join(os.getcwd(), "src", args.model, "models", "model_state.pth")
@@ -281,7 +282,7 @@ elif args.model == "funcgnn":
     # the embeddings of FuncGNN are of shape 64, probe_rank is still 128
     probe_model = FuncGNNParserProbe(
         probe_rank=args.probe_rank,
-        hidden_dim=64,
+        hidden_dim=args.probe_hidden_dim,
         number_labels_d=max_d_len_train,
         number_labels_c=max_c_len_train,
         number_labels_u=max_u_len_train,
@@ -386,6 +387,7 @@ elif args.model == "summarization_tf":
 
     code_w2i = read_pickle(f"{args.dataset_path}/code_w2i.pkl")
     nl_w2i = read_pickle(f"{args.dataset_path}/nl_w2i.pkl")
+
     model = MultiwayModel(
         512,
         512,
@@ -396,6 +398,7 @@ elif args.model == "summarization_tf":
         lr=0.001,
         layer=1,
     )
+
     model.load_state_dict(
         torch.load(
             os.path.join(
@@ -585,29 +588,24 @@ elif args.model == "code_sum_drl":
         max_c = max(max_c, max([len(c) for c in cs]))
         max_u = max(max_u, max([len(u) for u in us]))
 
-    #! No longer required
-    # print("mac D: ", max_d)
-    # print("mac C: ", max_c)
-    # print("mac U: ", max_u)
-
     code_encoder = lib.TreeEncoder(opt, dicts["src"])
     text_encoder = lib.Encoder(opt, dicts["src"])
     decoder = lib.HybridDecoder(opt, dicts["tgt"])
     generator = lib.BaseGenerator(torch.nn.Linear(opt.rnn_size, dicts["tgt"].size()), opt)
     model = lib.Hybrid2SeqModel(code_encoder, text_encoder, decoder, generator, opt)
 
-    # checkpoint = torch.load(
-    #     os.path.join(
-    #         os.getcwd(),
-    #         "src",
-    #         args.model,
-    #         "models",
-    #         "model_state.pt",
-    #     ),
-    #     map_location=torch.device("cpu"),
-    # )
-    # model = checkpoint["model"]
-
+    checkpoint = torch.load(
+        os.path.join(
+            os.getcwd(),
+            "src",
+            args.model,
+            "models",
+            "model_state.pt",
+        ),
+        map_location=torch.device("cpu"),
+    )
+    model = checkpoint["model"]
+    model.opt.cuda = False
     probe_model = CodeSumDRLarserProbe(
         probe_rank=args.probe_rank,
         hidden_dim=args.probe_hidden_dim,
