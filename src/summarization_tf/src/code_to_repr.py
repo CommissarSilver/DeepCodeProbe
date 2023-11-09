@@ -4,7 +4,7 @@ from summarization_tf.src.utils import Datagen_tree, read_pickle
 
 u_index = {}
 u_index_counter = 0
-dataset_path = "/Users/ahura/Nexus/Leto/src/summarization_tf/dataset"
+dataset_path = "/store/travail/vamaj/Leto/src/summarization_tf/dataset"
 trn_data = read_pickle(f"{dataset_path}/nl/train.pkl")
 code_indexes = list(trn_data.keys())
 code_indexes = [int(i.split("/")[-1]) for i in code_indexes]
@@ -79,7 +79,7 @@ def ast_to_index(D, C, U):
 def code_to_index(code: str, nl: str, code_index: int):
     if code_index in code_indexes:
         if os.path.exists(
-            f"/Users/ahura/Nexus/Leto/src/summarization_tf/dataset/tree/train/{code_index+1}"
+            f"/store/travail/vamaj/Leto/src/summarization_tf/dataset/tree/train/{code_index+1}"
         ):
             trn_y_code = [
                 nl_w2i[t] if t in nl_w2i.keys() else nl_w2i["<UNK>"] for t in nl.split()
@@ -87,7 +87,7 @@ def code_to_index(code: str, nl: str, code_index: int):
 
             trn_gen = Datagen_tree(
                 [
-                    f"/Users/ahura/Nexus/Leto/src/summarization_tf/dataset/tree/train/{code_index+1}"
+                    f"/store/travail/vamaj/Leto/src/summarization_tf/dataset/tree/train/{code_index+1}"
                 ],
                 [trn_y_code],
                 1,
