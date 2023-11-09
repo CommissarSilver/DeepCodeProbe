@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from torch.nn.utils.rnn import pad_sequence
-from torch_scatter import scatter_mean
+# from torch_scatter import scatter_mean
 
 
 def get_embeddings_astnn(all_inputs, model, **kwargs):
