@@ -97,9 +97,12 @@ class Evaluator(object):
                 pred = [self.dicts["tgt"].getLabel(w) for w in pred]
                 tgt = [self.dicts["tgt"].getLabel(w) for w in target]
 
-                f.write(str(i) + ": src: "+ " ".join(src).encode('utf-8', 'ignore') + '\n')
-                f.write(str(i) + ": pre: " + " ".join(pred).encode('utf-8', 'ignore') + '\n')
-                f.write(str(i) + ": tgt: "+ " ".join(tgt).encode('utf-8', 'ignore') + '\n')
+                f.write(str(i) + ": src: " + " ".join(src) + '\n')
+
+                f.write(str(i) + ": pred: " + " ".join(pred) + '\n')
+
+                f.write(str(i) + ": tgt: " + " ".join(tgt) + '\n')
+
 
         loss, sent_reward, corpus_reward = metrics
         print("")
