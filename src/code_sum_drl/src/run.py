@@ -42,9 +42,9 @@ if hostname == "ccnt-ubuntu":
     ):
         run = (
             "python a2c-train.py "
-            "-data /store/travail/vamaj/code_summarization_public/dataset/train/processed_all.train.pt "\
-            "-save_dir /store/travail/vamaj/code_summarization_public/dataset/result/ "\
-            "-embedding_w2v /store/travail/vamaj/code_summarization_public/dataset/train/ "\
+            "-data /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/processed_all.train.pt "\
+            "-save_dir /store/travail/vamaj/Leto/src/code_sum_drl/dataset/result/ "\
+            "-embedding_w2v /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/ "\
             "-start_reinforce %s "\
             "-end_epoch %s "\
             "-critic_pretrain_epochs %s "\
@@ -71,9 +71,9 @@ if hostname == "ccnt-ubuntu":
     def test_a2c(data_type, has_attn, gpus):
         run = (
             "python a2c-train.py "
-            "-data /store/travail/vamaj/code_summarization_public/dataset/train/processed_all.train.pt "
-            "-load_from /store/travail/vamaj/code_summarization_public/dataset/result/model_rf_hybrid_1_30_reinforce.pt "
-            "-embedding_w2v /store/travail/vamaj/code_summarization_public/dataset/train/ "
+            "-data /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/processed_all.train.pt "
+            "-load_from /store/travail/vamaj/Leto/src/code_sum_drl/dataset/result/model_rf_hybrid_1_30_reinforce.pt "
+            "-embedding_w2v /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/ "
             "-eval -save_dir . "
             "-data_type %s "
             "-has_attn %s "
