@@ -6,7 +6,11 @@ from torch.nn.utils.rnn import pad_packed_sequence as unpack
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 import gensim
 import numpy as np
-import lib
+
+try:
+    import lib
+except ImportError:
+    import code_sum_drl.src.lib as lib
 import sys
 import re
 
@@ -286,20 +290,16 @@ class TreeEncoder(nn.Module):
         )
         self.input_size = self.opt.word_vec_size
 
-        self.cudaFlag = len(self.opt.gpus) >= 1
+        self.cudaFlag = False
 
-        self.leaf_module = BinaryTreeLeafModule(
-            self.cudaFlag, self.input_size, self.hidden_size
-        )
-        self.composer = BinaryTreeComposer(
-            self.cudaFlag, self.input_size, self.hidden_size
-        )
+        self.leaf_module = BinaryTreeLeafModule(False, self.input_size, self.hidden_size)
+        self.composer = BinaryTreeComposer(False, self.input_size, self.hidden_size)
 
     def forward(self, tree, lengths):
         if not tree.children:
             node_idx = torch.LongTensor(
                 [self.dicts.lookup(tree.content, lib.Constants.UNK)]
-            ).to("cuda" if self.cudaFlag else "cpu")
+            ).to("cpu")
             node = self.word_lut(Variable(node_idx))
 
             output, state = self.leaf_module.forward(node)
@@ -319,9 +319,7 @@ class TreeEncoder(nn.Module):
                 output = output.unsqueeze(1)
                 supl = max_length - output.size(0)
                 if supl > 0:
-                    zeros = torch.zeros((supl, output.size(1), output.size(2))).to(
-                        "cuda" if self.cudaFlag else "cpu"
-                    )
+                    zeros = torch.zeros((supl, output.size(1), output.size(2))).to("cpu")
                     output = torch.cat([output, zeros], 0)
 
                 h, c = state

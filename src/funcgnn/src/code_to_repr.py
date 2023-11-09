@@ -1,5 +1,7 @@
-import json, glob, torch
+import json, glob, torch, os
 import numpy as np
+
+src_path = os.path.join(os.getcwd(), "src", "funcgnn", "dataset")
 
 
 def process_pair(path):
@@ -12,11 +14,9 @@ def process_pair(path):
     return data
 
 
-training_graphs = glob.glob(
-    "/Users/ahura/Nexus/Leto/src/funcgnn/dataset/train/" + "*.json"
-)
-testing_graphs = glob.glob("/Users/ahura/Nexus/Leto/src/funcgnn/dataset/test/" + "*.json")
-random_graphs = glob.glob("/Users/ahura/Nexus/Leto/src/funcgnn/dataset/test/" + "*.json")
+training_graphs = glob.glob(os.path.join(src_path, "train") + "/*.json")
+testing_graphs = glob.glob(os.path.join(src_path, "test") + "/*.json")
+random_graphs = glob.glob(os.path.join(src_path, "test") + "/*.json")
 
 graph_pairs = training_graphs + testing_graphs
 global_labels = set()
@@ -59,9 +59,15 @@ if __name__ == "__main__":
     j = code_to_index(
         json.loads(
             open(
-                "/Users/ahura/Nexus/Leto/src/funcgnn/dataset/test/addTwoArrays_DC_EQ_m3::::addTwoArrays_L_EQ_m4.json"
+                os.path.join(
+                    src_path, "test", "addTwoArrays_DC_EQ_m3___addTwoArrays_L_EQ_m4.json"
+                )
             ).read()
         )
     )
 
-    print(j)
+    assert (
+        "d" and "c" and "u" in j.keys()
+    ), "Problem. This needs to be inspected manually. Sorry."
+
+    print("\033[32m All tests passed.\033[0m")

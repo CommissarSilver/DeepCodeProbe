@@ -1,10 +1,14 @@
 import javalang, json, os
-from summarization_tf.src.utils import Datagen_tree, read_pickle
+
+try:
+    from summarization_tf.src.utils import Datagen_tree, read_pickle
+except ImportError:
+    from utils import Datagen_tree, read_pickle
 
 
 u_index = {}
 u_index_counter = 0
-dataset_path = "/store/travail/vamaj/Leto/src/summarization_tf/dataset"
+dataset_path = os.path.join(os.getcwd(), "src", "summarization_tf", "dataset")
 trn_data = read_pickle(f"{dataset_path}/nl/train.pkl")
 code_indexes = list(trn_data.keys())
 code_indexes = [int(i.split("/")[-1]) for i in code_indexes]
@@ -77,18 +81,15 @@ def ast_to_index(D, C, U):
 
 
 def code_to_index(code: str, nl: str, code_index: int):
+    dataset_tree_train_path = os.path.join(dataset_path, "tree", "train")
     if code_index in code_indexes:
-        if os.path.exists(
-            f"/store/travail/vamaj/Leto/src/summarization_tf/dataset/tree/train/{code_index+1}"
-        ):
+        if os.path.exists(f"{dataset_tree_train_path}/{code_index+1}"):
             trn_y_code = [
                 nl_w2i[t] if t in nl_w2i.keys() else nl_w2i["<UNK>"] for t in nl.split()
             ]
 
             trn_gen = Datagen_tree(
-                [
-                    f"/store/travail/vamaj/Leto/src/summarization_tf/dataset/tree/train/{code_index+1}"
-                ],
+                [f"{dataset_tree_train_path}/{code_index+1}"],
                 [trn_y_code],
                 1,
                 code_w2i,
@@ -118,5 +119,7 @@ if __name__ == "__main__":
     path_to_code = "/Users/ahura/Nexus/Leto/src/summarization_tf/dataset/valid.json"
     codes = open(path_to_code).readlines()
     for code in codes:
-        ds, cs, us = code_to_ast(code)
+        temp = json.loads(code)
+        ds, cs, us = code_to_ast(temp["code"])
         ds, cs, us = ast_to_index(ds, cs, us)
+    print("hi")
