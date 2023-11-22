@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
-import sys
-import torch
 import argparse
-import random, os
+import os
+import random
+import sys
+
 import numpy as np
-
-from torch.autograd import Variable
+import torch
 import torch.nn.functional as F
+from lm import LMProb, model
+from nmt import (NMT, data_iter, data_iter_for_dual, decode, get_bleu,
+                 get_new_batch, read_corpus, read_corpus_for_dsl,
+                 to_input_variable, vocab)
+from torch.autograd import Variable
 
-from nmt import read_corpus_for_dsl, data_iter, get_new_batch, data_iter_for_dual
-from nmt import NMT, to_input_variable, decode, get_bleu, read_corpus, vocab
-
-from lm import LMProb
-from lm import model
 
 def loss_att(a, b, mask, length):
     epsilon = 1e-8

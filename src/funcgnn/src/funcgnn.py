@@ -1,19 +1,21 @@
 """funcGNN class and runner."""
-import os
 import glob
-import torch
+import os
 import random
+
 import numpy as np
+import torch
+from torch_geometric.nn import GCNConv, SAGEConv
 from tqdm import tqdm, trange
-from torch_geometric.nn import GCNConv
-from torch_geometric.nn import SAGEConv
 
 try:
     from layers import AttentionModule, TenorNetworkModule
-    from utils import process_pair, calculate_loss, calculate_normalized_ged
+
+    from utils import calculate_loss, calculate_normalized_ged, process_pair
 except ImportError:
     from .layers import AttentionModule, TenorNetworkModule
     from .utils import process_pair, calculate_loss, calculate_normalized_ged
+
 import concurrent.futures as cf
 import time
 

@@ -1,6 +1,8 @@
-import matplotlib as mpl
 import csv
 import sys
+
+import matplotlib as mpl
+
 mpl.use('TkAgg')
 bool = True
 args = sys.argv[1]
@@ -30,6 +32,7 @@ else:
             title = 'Testing Dataset Size - 10125'
 
 import matplotlib.pyplot as plt
+
 plt.plot(x,y, label='Loss function')
 
 plt.ylabel('Error Rate')

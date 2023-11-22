@@ -1,35 +1,31 @@
-import os, argparse, logging, pickle, torch
-import numpy as np
-
+import argparse
+import logging
+import os
+import pickle
 from collections import defaultdict
-from torch.utils.data import DataLoader
+
+import numpy as np
+import torch
 from datasets import load_dataset
-from tree_sitter import Parser
+from torch.utils.data import DataLoader
 from tqdm import tqdm
+from tree_sitter import Parser
 
 from ast_nn.src.code_to_repr import code_to_index
-
-from ast_probe.data import (
-    convert_sample_to_features,
-    PY_LANGUAGE,
-    JAVA_LANGUAGE,
-)
-from ast_probe.probe import ParserProbe, ParserLoss, get_embeddings
-from ast_probe.data.utils import (
-    match_tokenized_to_untokenized_roberta,
-    remove_comments_and_docstrings_java_js,
-    remove_comments_and_docstrings_python,
-)
+from ast_probe.data import (JAVA_LANGUAGE, PY_LANGUAGE,
+                            convert_sample_to_features)
+from ast_probe.data.binary_tree import (add_unary, distance_to_tree,
+                                        extend_complex_nodes,
+                                        get_precision_recall_f1,
+                                        get_recall_non_terminal,
+                                        remove_empty_nodes)
+from ast_probe.data.data_loading import (convert_to_ids,
+                                         get_non_terminals_labels)
+from ast_probe.data.utils import (match_tokenized_to_untokenized_roberta,
+                                  remove_comments_and_docstrings_java_js,
+                                  remove_comments_and_docstrings_python)
+from ast_probe.probe import ParserLoss, ParserProbe, get_embeddings
 from ast_probe.probe.utils import collator_fn
-from ast_probe.data.data_loading import get_non_terminals_labels, convert_to_ids
-from ast_probe.data.binary_tree import (
-    distance_to_tree,
-    remove_empty_nodes,
-    extend_complex_nodes,
-    get_precision_recall_f1,
-    add_unary,
-    get_recall_non_terminal,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -78,9 +74,10 @@ def run_probing_train(
     )
 
     if model_type == "astnn":
+        from gensim.models.word2vec import Word2Vec
+
         from ast_nn.src.data_pipeline import process_input
         from ast_nn.src.model import BatchProgramCC
-        from gensim.models.word2vec import Word2Vec
 
         word2vec = Word2Vec.load(
             os.path.join(

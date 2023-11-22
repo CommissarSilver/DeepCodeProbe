@@ -1,7 +1,15 @@
-import os, torch, yaml, logging, logging.config, warnings, argparse, numpy as np
-from datasets import load_dataset
-from utils import probe_utils
+import argparse
+import logging
+import logging.config
+import os
+import warnings
 
+import numpy as np
+import torch
+import yaml
+from datasets import load_dataset
+
+from utils import probe_utils
 
 warnings.filterwarnings("ignore")
 with open(os.path.join(os.getcwd(), "src", "logging_config.yaml"), "r") as f:
@@ -77,16 +85,13 @@ args = parser.parse_args()
 device = args.device
 
 if args.model == "ast_nn":
+    from gensim.models.word2vec import Word2Vec
+
     from ast_nn.src.code_to_repr import code_to_index
     from ast_nn.src.data_pipeline import process_input
     from ast_nn.src.model import BatchProgramCC
-    from gensim.models.word2vec import Word2Vec
-    from ast_probe.probe import (
-        ParserProbe,
-        ParserLoss,
-        get_embeddings_astnn,
-        collator_fn_astnn,
-    )
+    from ast_probe.probe import (ParserLoss, ParserProbe, collator_fn_astnn,
+                                 get_embeddings_astnn)
 
     data_files = {
         "train": os.path.join(args.dataset_path, args.language, "train.jsonl"),
@@ -218,18 +223,15 @@ if args.model == "ast_nn":
     )
 
 elif args.model == "funcgnn":
+    import json
+
+    import pandas as pd
+
+    from ast_probe.probe import (FuncGNNParserProbe, ParserLossFuncGNN,
+                                 collator_fn_funcgnn, get_embeddings_funcgnn)
     from funcgnn.src.code_to_repr import code_to_index
     from funcgnn.src.funcgnn import funcGNNTrainer
     from funcgnn.src.param_parser import parameter_parser
-
-    from ast_probe.probe import (
-        FuncGNNParserProbe,
-        ParserLossFuncGNN,
-        get_embeddings_funcgnn,
-        collator_fn_funcgnn,
-    )
-
-    import json, pandas as pd
 
     # the data_files come from the original dataset of FungGNN
     data_files = {
@@ -307,16 +309,11 @@ elif args.model == "summarization_tf":
     import pandas as pd
     from torch.utils.data import Dataset
 
+    from ast_probe.probe import (ParserLossSumTF, SumTFParserProbe,
+                                 collator_fn_sum_tf, get_embeddings_sum_tf)
     from summarization_tf.src.code_to_repr import code_to_index
     from summarization_tf.src.models import MultiwayModel
     from summarization_tf.src.utils import read_pickle
-
-    from ast_probe.probe import (
-        SumTFParserProbe,
-        ParserLossSumTF,
-        get_embeddings_sum_tf,
-        collator_fn_sum_tf,
-    )
 
     class CustomDataset(Dataset):
         def __init__(self, dataframe):
@@ -439,22 +436,20 @@ elif args.model == "summarization_tf":
     )
 
 elif args.model == "code_sum_drl":
-    import pandas as pd
-
-    from torch.utils.data import Dataset
-    from code_sum_drl.src.code_to_repr import code_to_index
-    from code_sum_drl.src.code_to_repr import Dataset as CodeSumDataset
     import sys
+
+    import pandas as pd
+    from torch.utils.data import Dataset
+
+    from code_sum_drl.src.code_to_repr import Dataset as CodeSumDataset
+    from code_sum_drl.src.code_to_repr import code_to_index
 
     sys.path.append("/Users/ahura/Nexus/Leto/src/code_sum_drl/src")
     import lib
     from lib.data.Tree import *
 
-    from ast_probe.probe import (
-        CodeSumDRLarserProbe,
-        ParserLossCodeSumDRL,
-        get_embeddings_code_sum_drl,
-    )
+    from ast_probe.probe import (CodeSumDRLarserProbe, ParserLossCodeSumDRL,
+                                 get_embeddings_code_sum_drl)
 
     opt = argparse.ArgumentParser()
     opt.add_argument(

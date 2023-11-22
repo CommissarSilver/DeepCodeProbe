@@ -1,6 +1,6 @@
-import os
 import glob
 import json
+import os
 
 avg_train_GED = 0
 avg_test_GED = 0

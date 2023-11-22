@@ -2,6 +2,7 @@
 
 import torch
 
+
 class AttentionModule(torch.nn.Module):
     """
     funcGNN Attention Module to make a pass on graph.

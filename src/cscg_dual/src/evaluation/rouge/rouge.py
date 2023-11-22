@@ -1,7 +1,9 @@
 
 
-import numpy as np
 import pdb
+
+import numpy as np
+
 
 def my_lcs(string, sub):
     """

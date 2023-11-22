@@ -2,7 +2,9 @@
 
 import json
 import math
+
 from texttable import Texttable
+
 
 def tab_printer(args):
     """

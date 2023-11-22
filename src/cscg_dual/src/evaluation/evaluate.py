@@ -1,9 +1,10 @@
-from meteor.meteor import Meteor
-from rouge.rouge import Rouge
-from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
+import sys
 
 import numpy as np
-import sys
+from meteor.meteor import Meteor
+from nltk.translate.bleu_score import (SmoothingFunction, corpus_bleu,
+                                       sentence_bleu)
+from rouge.rouge import Rouge
 
 result_file = '../results/output'
 

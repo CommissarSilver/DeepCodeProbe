@@ -1,7 +1,8 @@
-import matplotlib.pyplot as plt
 import csv
-import train_ged_distribution as tr_gd
+
+import matplotlib.pyplot as plt
 import test_ged_distribution as te_gd
+import train_ged_distribution as tr_gd
 from scipy.stats import skew
 
 test_bins = 170

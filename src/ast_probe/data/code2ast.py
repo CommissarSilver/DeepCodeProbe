@@ -1,9 +1,7 @@
 import networkx as nx
 
-from .utils import (
-    remove_comments_and_docstrings_python,
-    remove_comments_and_docstrings_java_js,
-)
+from .utils import (remove_comments_and_docstrings_java_js,
+                    remove_comments_and_docstrings_python)
 
 
 # aux function, get a new id in the graph

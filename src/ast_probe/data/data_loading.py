@@ -1,11 +1,11 @@
-import os, logging
-
+import logging
+import os
 from collections import Counter
+
 from tree_sitter import Language, Parser
 
 from .binary_tree import ast2binary, tree_to_distance
 from .code2ast import code2ast, get_tokens_ast
-
 
 logger = logging.getLogger("data")
 

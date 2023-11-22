@@ -1,9 +1,10 @@
 import os
+
 import numpy as np
+from gensim.models.word2vec import Word2Vec
 
 # from ast_nn.src.data_pipeline import process_input
 from ast_nn.src.model import BatchProgramCC
-from gensim.models.word2vec import Word2Vec
 
 language = "java"
 word2vec = Word2Vec.load(

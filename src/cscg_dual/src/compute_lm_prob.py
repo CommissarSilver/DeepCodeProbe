@@ -1,7 +1,9 @@
 
-from lm import LMProb
+from concurrent.futures import (ProcessPoolExecutor, ThreadPoolExecutor,
+                                as_completed)
 from multiprocessing import Pool
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+
+from lm import LMProb
 
 lms = ['language_models/java/code.pt','language_models/java/nl.pt']
 read_file_paths = ['data/java/train.token.code', 'data/java/train.token.nl']

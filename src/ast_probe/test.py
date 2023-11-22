@@ -1,5 +1,10 @@
-import logging, logging.config, os, yaml
-from data.data_loading import JAVA_PARSER, JAVA_LANGUAGE, convert_sample_to_features
+import logging
+import logging.config
+import os
+
+import yaml
+from data.data_loading import (JAVA_LANGUAGE, JAVA_PARSER,
+                               convert_sample_to_features)
 # from data.collator import collator_fn
 from transformers import AutoTokenizer
 

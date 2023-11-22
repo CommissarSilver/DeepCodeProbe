@@ -1,32 +1,25 @@
-import os, argparse, logging, pickle, torch
-import numpy as np
-
+import argparse
+import logging
+import os
+import pickle
 from collections import defaultdict
-from torch.utils.data import DataLoader
+
+import numpy as np
+import torch
+from data import JAVA_LANGUAGE, PY_LANGUAGE, convert_sample_to_features
+from data.binary_tree import (add_unary, distance_to_tree,
+                              extend_complex_nodes, get_precision_recall_f1,
+                              get_recall_non_terminal, remove_empty_nodes)
+from data.data_loading import convert_to_ids, get_non_terminals_labels
+from data.utils import (match_tokenized_to_untokenized_roberta,
+                        remove_comments_and_docstrings_java_js,
+                        remove_comments_and_docstrings_python)
 from datasets import load_dataset
-from tree_sitter import Parser
-from tqdm import tqdm
-from data import (
-    convert_sample_to_features,
-    PY_LANGUAGE,
-    JAVA_LANGUAGE,
-)
-from probe import ParserProbe, ParserLoss, get_embeddings
-from data.utils import (
-    match_tokenized_to_untokenized_roberta,
-    remove_comments_and_docstrings_java_js,
-    remove_comments_and_docstrings_python,
-)
+from probe import ParserLoss, ParserProbe, get_embeddings
 from probe.utils import collator_fn
-from data.data_loading import get_non_terminals_labels, convert_to_ids
-from data.binary_tree import (
-    distance_to_tree,
-    remove_empty_nodes,
-    extend_complex_nodes,
-    get_precision_recall_f1,
-    add_unary,
-    get_recall_non_terminal,
-)
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from tree_sitter import Parser
 
 logger = logging.getLogger(__name__)
 

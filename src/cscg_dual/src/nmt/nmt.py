@@ -1,30 +1,27 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+import argparse
 import os
 import sys
 import time
-import argparse
 from itertools import tee
 
 import numpy as np
-
 import torch
 import torch.nn as nn
-import torch.nn.utils
-from torch.autograd import Variable
-from torch import optim
-from torch.nn import Parameter
 import torch.nn.functional as F
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
-from torch.cuda.amp import autocast, GradScaler
-
-from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
-
-from util import read_corpus, data_iter
+import torch.nn.utils
+import tqdm
+from nltk.translate.bleu_score import (SmoothingFunction, corpus_bleu,
+                                       sentence_bleu)
+from torch import optim
+from torch.autograd import Variable
+from torch.cuda.amp import GradScaler, autocast
+from torch.nn import Parameter
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from util import data_iter, read_corpus
 from vocab import Vocab, VocabEntry
-
-import sys, tqdm
 
 
 def init_config():

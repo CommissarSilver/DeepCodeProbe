@@ -1,8 +1,9 @@
-import torch
 import numpy as np
-from torch.autograd import Variable
-from scipy.spatial import distance
+import torch
 import torch.nn.functional as F
+from scipy.spatial import distance
+from torch.autograd import Variable
+
 
 def loss_att(a, b, mask, length):
     epsilon = 1e-8

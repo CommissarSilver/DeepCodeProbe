@@ -1,8 +1,10 @@
 """funcGNN runner."""
 
-from utils import tab_printer
-from funcgnn import funcGNNTrainer
 from param_parser import parameter_parser
+
+from funcgnn import funcGNNTrainer
+from utils import tab_printer
+
 
 def main():
     """

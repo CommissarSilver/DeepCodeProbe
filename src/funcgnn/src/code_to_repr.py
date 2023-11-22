@@ -1,5 +1,9 @@
-import json, glob, torch, os
+import glob
+import json
+import os
+
 import numpy as np
+import torch
 
 src_path = os.path.join(os.getcwd(), "src", "funcgnn", "dataset")
 

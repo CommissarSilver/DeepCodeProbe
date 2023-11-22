@@ -1,6 +1,7 @@
-from collections import defaultdict
-import numpy as np
 import codecs
+from collections import defaultdict
+
+import numpy as np
 
 
 def read_corpus(file_path, source):

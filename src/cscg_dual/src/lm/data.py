@@ -1,6 +1,7 @@
 import os
-import torch
 import pickle
+
+import torch
 
 
 class Dictionary(object):
