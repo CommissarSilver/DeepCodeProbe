@@ -80,7 +80,7 @@ def train_probe(
         optimizer,
         mode="min",
         factor=0.1,
-        patience=0,
+        patience=2,
     )
 
     criterion = probe_loss
@@ -130,7 +130,7 @@ def train_probe(
             optimizer.zero_grad()
             training_loss.append(loss.item())
 
-        # training_loss = sum(training_loss) / len(train_dataloader)
+        training_loss = sum(training_loss) / len(train_dataloader)
 
         eval_loss, acc_d, acc_c, acc_u = eval_probe(
             embedding_func,
@@ -170,6 +170,7 @@ def train_probe(
             patience_count += 1
         # Implement early stopping if validation loss doesn't improve after 'patience' epochs
         if patience_count == patience:
+            print("\033[91mStopping training. Patience reached.\033[0m")
             logger.info("Stopping training loop (out of patience).")
             break
         # save metrics in a json file
