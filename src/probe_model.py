@@ -25,7 +25,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "--device",
     type=str,
-    default="cpu" if not torch.cuda.is_available() else "gpu",
+    default="cpu",
     help="Whether to use CPU or GPU for training and evaluating the probe",
 )
 parser.add_argument(
@@ -33,13 +33,13 @@ parser.add_argument(
     type=str,
     help="Model to probe",
     choices=["ast_nn", "funcgnn", "summarization_tf", "code_sum_drl", "cscg_dual"],
-    default="code_sum_drl",
+    default="ast_nn",
 )
 parser.add_argument(
     "--dataset_path",
     type=str,
     help="Path to the dataset - Path follows the format /model_name/dataset",
-    default=os.path.join(os.getcwd(), "src", "code_sum_drl", "dataset"),
+    default=os.path.join(os.getcwd(), "src", "ast_nn", "dataset"),
 )
 parser.add_argument(
     "--language",
@@ -51,7 +51,7 @@ parser.add_argument(
 parser.add_argument(
     "--train_epochs",
     type=int,
-    default=20,
+    default=100,
     help="Number of epochs to train the probe",
 )
 parser.add_argument(
@@ -69,14 +69,14 @@ parser.add_argument(
 parser.add_argument(
     "--probe_rank",
     type=int,
-    default=512,
+    default=128,
     choices=[128, 512],
     help="Rank of the probe. 128 for AST-NN and FuncGNN, 512 for SumTF and CodeSumDRL",
 )
 parser.add_argument(
     "--probe_hidden_dim",
     type=int,
-    default=512,
+    default=200,
     choices=[200, 64, 512],
     help="Hidden dimension of the probe. 200 for AST-NN. 64 for FuncGnn, 512 for SumTF, 512 for CodeSumDRL",
 )
@@ -90,8 +90,12 @@ if args.model == "ast_nn":
     from ast_nn.src.code_to_repr import code_to_index
     from ast_nn.src.data_pipeline import process_input
     from ast_nn.src.model import BatchProgramCC
-    from ast_probe.probe import (ParserLoss, ParserProbe, collator_fn_astnn,
-                                 get_embeddings_astnn)
+    from ast_probe.probe import (
+        ParserLoss,
+        ParserProbe,
+        collator_fn_astnn,
+        get_embeddings_astnn,
+    )
 
     data_files = {
         "train": os.path.join(args.dataset_path, args.language, "train.jsonl"),
@@ -227,8 +231,12 @@ elif args.model == "funcgnn":
 
     import pandas as pd
 
-    from ast_probe.probe import (FuncGNNParserProbe, ParserLossFuncGNN,
-                                 collator_fn_funcgnn, get_embeddings_funcgnn)
+    from ast_probe.probe import (
+        FuncGNNParserProbe,
+        ParserLossFuncGNN,
+        collator_fn_funcgnn,
+        get_embeddings_funcgnn,
+    )
     from funcgnn.src.code_to_repr import code_to_index
     from funcgnn.src.funcgnn import funcGNNTrainer
     from funcgnn.src.param_parser import parameter_parser
@@ -309,8 +317,12 @@ elif args.model == "summarization_tf":
     import pandas as pd
     from torch.utils.data import Dataset
 
-    from ast_probe.probe import (ParserLossSumTF, SumTFParserProbe,
-                                 collator_fn_sum_tf, get_embeddings_sum_tf)
+    from ast_probe.probe import (
+        ParserLossSumTF,
+        SumTFParserProbe,
+        collator_fn_sum_tf,
+        get_embeddings_sum_tf,
+    )
     from summarization_tf.src.code_to_repr import code_to_index
     from summarization_tf.src.models import MultiwayModel
     from summarization_tf.src.utils import read_pickle
@@ -448,8 +460,11 @@ elif args.model == "code_sum_drl":
     import lib
     from lib.data.Tree import *
 
-    from ast_probe.probe import (CodeSumDRLarserProbe, ParserLossCodeSumDRL,
-                                 get_embeddings_code_sum_drl)
+    from ast_probe.probe import (
+        CodeSumDRLarserProbe,
+        ParserLossCodeSumDRL,
+        get_embeddings_code_sum_drl,
+    )
 
     opt = argparse.ArgumentParser()
     opt.add_argument(
@@ -586,7 +601,9 @@ elif args.model == "code_sum_drl":
     code_encoder = lib.TreeEncoder(opt, dicts["src"])
     text_encoder = lib.Encoder(opt, dicts["src"])
     decoder = lib.HybridDecoder(opt, dicts["tgt"])
-    generator = lib.BaseGenerator(torch.nn.Linear(opt.rnn_size, dicts["tgt"].size()), opt)
+    generator = lib.BaseGenerator(
+        torch.nn.Linear(opt.rnn_size, dicts["tgt"].size()), opt
+    )
     model = lib.Hybrid2SeqModel(code_encoder, text_encoder, decoder, generator, opt)
 
     checkpoint = torch.load(
