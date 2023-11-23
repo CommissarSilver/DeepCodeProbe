@@ -26,7 +26,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Choose a dataset:[c|java]")
-    parser.add_argument("--lang")
+    parser.add_argument("--lang",default='c')
     args = parser.parse_args()
     if not args.lang:
         print("No specified dataset")
