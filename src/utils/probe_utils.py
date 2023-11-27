@@ -144,7 +144,7 @@ def train_probe(
         scheduler.step(eval_loss)
 
         logger.info(
-            f"[epoch {epoch}] train loss: {round(sum(training_loss), 4)}, validation loss: {round(eval_loss, 4)}"
+            f"[epoch {epoch}] train loss: {round(training_loss, 4)}, validation loss: {round(eval_loss, 4)}"
         )
         logger.info(
             f"[epoch {epoch}] D accuracy: {round(acc_d, 4)}, C accuracy: {round(acc_c, 6)}, U accuracy: {round(acc_u, 4)}"
