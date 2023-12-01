@@ -4,7 +4,7 @@ import logging.config
 import os
 import pickle
 import warnings
-
+import json
 import numpy as np
 import pandas as pd
 import pickle5 as pickle
@@ -51,7 +51,7 @@ parser.add_argument(
     type=str,
     help="Language of the dataset. Only for AST-NN",
     choices=["java", "c"],
-    default="c",
+    default="java",
 )
 parser.add_argument(
     "--train_epochs",
@@ -141,10 +141,10 @@ if args.model == "ast_nn":
         return avg_similarity
 
     def calculate_similarity(row):
-        tests1 = code_to_index(row["1_id1"], "c")
-        tests2 = code_to_index(row["1_id2"], "c")
+        tests1 = code_to_index(row["code_x"], args.language)
+        tests2 = code_to_index(row["code_y"], args.language)
         return (
-            abs(len(tests1["d"]) - len(tests2["d"])),
+            cosine_similarity(tests1["d"], tests2["d"]),
             cosine_similarity(tests1["u"], tests2["u"]),
             average_cosine_similarity(tests1["c"], tests2["c"]),
         )
@@ -157,10 +157,15 @@ if args.model == "ast_nn":
             merged_data.iterrows(),
             total=len(merged_data),
         ):
-            similarity_ds, similarity_us, similarity_cs = calculate_similarity(row)
-            merged_data_ds.append(similarity_ds)
-            merged_data_us.append(similarity_us)
-            merged_data_cs.append(similarity_cs)
+            try:
+                similarity_ds, similarity_us, similarity_cs = calculate_similarity(row)
+                merged_data_ds.append(similarity_ds)
+                merged_data_us.append(similarity_us)
+                merged_data_cs.append(similarity_cs)
+            except:
+                merged_data_ds.append(0)
+                merged_data_us.append(0)
+                merged_data_cs.append(0)
 
         return merged_data_ds, merged_data_us, merged_data_cs
 
@@ -243,18 +248,33 @@ if args.model == "ast_nn":
         for index, row in tqdm(
             merged_data.iterrows(),
             total=len(merged_data),
-            desc="Validating probe untrained/untrained",
+            desc="Validating probe trained/untrained",
         ):
-            embeddings_untrained = get_embeddings_astnn(
-                [row["code_x"], row["code_y"]], model_to_probe_untrained
-            )
-            embeddings_trained = get_embeddings_astnn(
-                [row["code_x"], row["code_y"]], model_to_probe_trained
-            )
-            embeddings_trained_all.append(embeddings_trained)
-            embeddings_untrained_all.append(embeddings_untrained)
+            try:
+                embeddings_untrained = get_embeddings_astnn(
+                    [row["code_x"], row["code_y"]], model_to_probe_untrained
+                )
+                embeddings_trained = get_embeddings_astnn(
+                    [row["code_x"], row["code_y"]], model_to_probe_trained
+                )
+                embeddings_trained_all.append(embeddings_trained)
+                embeddings_untrained_all.append(embeddings_untrained)
+            except:
+                embeddings_trained_all.append(None)
+                embeddings_untrained_all.append(None)
 
         return embeddings_trained_all, embeddings_untrained_all
+
+    def get_dcu_similarity(data: pd.DataFrame):
+        (
+            merged_data_ds,
+            merged_data_us,
+            merged_data_cs,
+        ) = get_similarity_from_asts(data)
+
+        print(f"Average of Ds: {sum(merged_data_ds)/len(merged_data_ds)}")
+        print(f"Average of Cs: {sum(merged_data_cs)/len(merged_data_cs)}")
+        print(f"Average of Us: {sum(merged_data_us)/len(merged_data_us)}")
 
     clone_ids = pickle.load(
         open(
@@ -282,12 +302,14 @@ if args.model == "ast_nn":
         programs.drop(columns=["label"], inplace=True)
     clone_ids["id1"] = clone_ids["id1"].astype(int)
     clone_ids["id2"] = clone_ids["id2"].astype(int)
+
     merged_data = pd.merge(
         clone_ids, programs, how="left", left_on="id1", right_on="id"
     )
     merged_data = pd.merge(
         merged_data, programs, how="left", left_on="id2", right_on="id"
     )
+
     merged_data.drop(["id_x", "id_y"], axis=1, inplace=True)
     merged_data.dropna(inplace=True)
     merged_data.reset_index(drop=True, inplace=True)
@@ -358,35 +380,9 @@ if args.model == "ast_nn":
         ),
     )
 
-    # (
-    #     merged_data_similar_ds,
-    #     merged_data_similar_us,
-    #     merged_data_similar_cs,
-    # ) = get_similarity_from_asts(merged_data_similar)
-    # (
-    #     merged_data_dissimilar_ds,
-    #     merged_data_dissimilar_us,
-    #     merged_data_dissimilar_cs,
-    # ) = get_similarity_from_asts(merged_data_dissimilar)
-    # print(
-    #     f"average od Ds for similar: {sum(merged_data_similar_ds)/len(merged_data_similar_ds)}"
-    # )
-    # print(
-    #     f"average od Us for similar: {sum(merged_data_similar_us)/len(merged_data_similar_us)}"
-    # )
-    # print(
-    #     f"average od Cs for similar: {sum(merged_data_similar_cs)/len(merged_data_similar_cs)}"
-    # )
+    print("Getting D,C,U similarity for similar")
+    get_dcu_similarity(merged_data_similar)
 
-    # print(
-    #     "Average of Ds for dissimilar: ",
-    #     sum(merged_data_dissimilar_ds) / len(merged_data_dissimilar_ds),
-    # )
-    # print(
-    #     "Average of Us for dissimilar: ",
-    #     sum(merged_data_dissimilar_us) / len(merged_data_dissimilar_us),
-    # )
-    # print(
-    #     "Average of Cs for dissimilar: ",
-    #     sum(merged_data_dissimilar_cs) / len(merged_data_dissimilar_cs),
-    # )
+    print("Getting D,C,U similarity for dissimilar")
+    get_dcu_similarity(merged_data_dissimilar)
+    
