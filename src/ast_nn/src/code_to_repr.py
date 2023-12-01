@@ -49,8 +49,10 @@ def ast_to_index(tree, language):
     elif language == "java":
         try:
             from utils import get_blocks_v1 as func
+        except ImportError:
+            from ast_nn.src.utils import get_blocks_v1 as func
 
-            word2vec = Word2Vec.load(
+        word2vec = Word2Vec.load(
                 os.path.join(
                     os.getcwd(),
                     "src",
@@ -61,10 +63,8 @@ def ast_to_index(tree, language):
                     "node_w2v_128",
                 )
             ).wv
-            vocab = word2vec
-            max_token = word2vec.vectors.shape[0]
-        except ImportError:
-            from ast_nn.src.utils import get_blocks_v1 as func
+        vocab = word2vec
+        max_token = word2vec.vectors.shape[0]
 
     def tree_to_index(node):
         token = node.token
