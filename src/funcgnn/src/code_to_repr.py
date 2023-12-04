@@ -55,16 +55,31 @@ def code_to_graph(data: dict):
     return {"d": d, "c": c, "u": u}
 
 
+def code_to_graph_single(data: dict):
+    new_data = dict()
+    edges_1 = data["graph"] + [[y, x] for x, y in data["graph"]]
+    edges_1 = torch.from_numpy(np.array(edges_1, dtype=np.int64).T).type(torch.long)
+    d = [i + 1 for i in range(len(data["labels"]))]
+    c = data["graph"] + [[y, x] for x, y in data["graph"]]
+    u = [global_labels[n] for n in data["labels"]]
+    return {"d": d, "c": c, "u": u}
+
+
+
 def code_to_index(data: dict):
     return code_to_graph(data)
 
+def code_to_index_single(data: dict):
+    return code_to_graph_single(data)
 
 if __name__ == "__main__":
     j = code_to_index(
         json.loads(
             open(
                 os.path.join(
-                    src_path, "test", "addTwoArrays_DC_EQ_m3___addTwoArrays_L_EQ_m4.json"
+                    src_path,
+                    "test",
+                    "addTwoArrays_DC_EQ_m3::::addTwoArrays_L_EQ_m4.json",
                 )
             ).read()
         )
