@@ -3,6 +3,10 @@ import javalang, json, os
 try:
     from summarization_tf.src.utils import Datagen_tree, read_pickle
 except ImportError:
+    import sys
+
+    sys.path.append("/store/travail/vamaj/Leto/src/summarization_tf/src")
+
     from utils import Datagen_tree, read_pickle
 
 
@@ -80,8 +84,8 @@ def ast_to_index(D, C, U):
     return final_d, final_c, final_u
 
 
-def code_to_index(code: str, nl: str, code_index: int):
-    dataset_tree_train_path = os.path.join(dataset_path, "tree", "train")
+def code_to_index(code: str, nl: str, code_index: int, mode: str = "train"):
+    dataset_tree_train_path = os.path.join(dataset_path, "tree", mode)
     if code_index in code_indexes:
         if os.path.exists(f"{dataset_tree_train_path}/{code_index+1}"):
             trn_y_code = [
