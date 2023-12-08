@@ -13,21 +13,21 @@ def parameter_parser():
     parser.add_argument(
         "--training-graphs",
         nargs="?",
-        default="/Users/ahura/Nexus/Leto/src/funcgnn/dataset/train/",
+        default="/store/travail/vamaj/Leto/src/funcgnn/dataset/train/",
         help="Folder with training graph pair jsons.",
     )
 
     parser.add_argument(
         "--testing-graphs",
         nargs="?",
-        default="/Users/ahura/Nexus/Leto/src/funcgnn/dataset/test/",
+        default="/store/travail/vamaj/Leto/src/funcgnn/dataset/test/",
         help="Folder with testing graph pair jsons.",
     )
 
     parser.add_argument(
         "--random-graphs",
         nargs="?",
-        default="/Users/ahura/Nexus/Leto/src/funcgnn/dataset/test/",
+        default="/store/travail/vamaj/Leto/src/funcgnn/dataset/test/",
         help="Folder with testing graph pair jsons.",
     )
 
