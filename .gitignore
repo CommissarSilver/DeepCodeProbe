@@ -5,12 +5,15 @@
 .DS_Store
 dataset.zip
 __pycache__
+dataset_*
 dataset
 logs
 grammars
 trained_models
 embeddings
 outputFiles
+src/summarization_tf/dataset_original
+src/summarization_tf/parser_original
 src/summarization_tf/dataset
 src/summarization_tf/parser
 /Users/ahura/Nexus/Leto/runs
