@@ -41,7 +41,7 @@ def get_embeddings_funcgnn(all_inputs, model, **kwargs):
         embs = [model.encode(i) for i in all_inputs]
         # FuncGNN gives intemediate ouputs which are not a ll of the same size in their first dimension.
         # therefore, padding is required to make them all of the same size
-        max_len = kwargs["max_len"]
+        max_len = 29
         padded_tensor = torch.zeros(len(embs), max_len, embs[0].size(1))
         # for each tensor, if its smaller than max_len, fill it with -1s
         for i, tensor in enumerate(embs):
