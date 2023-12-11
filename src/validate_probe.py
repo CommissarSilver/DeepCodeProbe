@@ -104,10 +104,30 @@ if args.model == "ast_nn":
     )
 
     # functions for calculating D,C,U similarity
-    def pad_list(short_list, target_length):
+    def pad_list(short_list: list, target_length: int) -> list:
+        """
+        Pads a given list with -1 values to reach the target length.
+
+        Args:
+            short_list (list): The list to be padded.
+            target_length (int): The desired length of the padded list.
+
+        Returns:
+            list: The padded list.
+        """
         return short_list + [-1] * (target_length - len(short_list))
 
-    def cosine_similarity(list1, list2):
+    def cosine_similarity(list1: list, list2: list) -> float:
+        """
+        Compute the cosine similarity between two lists.
+
+        Args:
+            list1 (list): The first list.
+            list2 (list): The second list.
+
+        Returns:
+            similarity (float): The cosine similarity between the two lists.
+        """
         # Pad the shorter list
         if len(list1) > len(list2):
             list2 = pad_list(list2, len(list1))
@@ -126,7 +146,17 @@ if args.model == "ast_nn":
 
         return similarity
 
-    def average_cosine_similarity(C1, C2):
+    def average_cosine_similarity(C1:list, C2:list)->float:
+        """
+        Calculate the average cosine similarity between two lists of lists.
+        
+        Args:
+            C1 (list): The first list of lists.
+            C2 (list): The second list of lists.
+        
+        Returns:
+            avg_similarity (float): The average cosine similarity between the two lists of lists.
+        """
         # Determine the length of the longest list
         max_length = max(len(C1), len(C2))
 
@@ -142,7 +172,12 @@ if args.model == "ast_nn":
         avg_similarity = sum(similarities) / len(similarities)
         return avg_similarity
 
-    def calculate_similarity(row):
+    def calculate_similarity(row:pd.Series)->tuple:
+        """
+        1 - Code is converted to AST-NN's required representation.
+        2 - The cosine similarity between the D, C, U representations of the two codes is calculated.
+        3 - The C tuple is a list of tensors therefore a different function is used to calculate the average cosine similarity.
+        """
         tests1 = code_to_index(row["code_x"], args.language)
         tests2 = code_to_index(row["code_y"], args.language)
         return (
@@ -151,7 +186,10 @@ if args.model == "ast_nn":
             average_cosine_similarity(tests1["c"], tests2["c"]),
         )
 
-    def get_similarity_from_asts(merged_data):
+    def get_similarity_from_asts(merged_data:pd.DataFrame)->tuple:
+        """
+        Calculate the D,C,U similarity for the given dataset.
+        """
         merged_data_ds = []
         merged_data_us = []
         merged_data_cs = []
@@ -432,6 +470,8 @@ if args.model == "ast_nn":
 
         return sum(similarities) / len(similarities)
 
+    get_initial_data()
+    
     cosine_sim_similar_trained = compare_embeddings(
         model="untrained",
         mode="similar",
@@ -1124,7 +1164,7 @@ elif args.model == "code_sum_drl":
 
     import pandas as pd
     from torch.utils.data import Dataset
-
+    from datasets import load_dataset
     from code_sum_drl.src.code_to_repr import Dataset as CodeSumDataset
     from code_sum_drl.src.code_to_repr import code_to_index
 
@@ -1137,6 +1177,65 @@ elif args.model == "code_sum_drl":
         ParserLossCodeSumDRL,
         get_embeddings_code_sum_drl,
     )
+
+    def get_opt():
+        opt = argparse.ArgumentParser()
+
+        opt.add_argument(
+            "-rnn_size", type=int, default=512, help="Size of LSTM hidden states,"
+        )
+        opt.add_argument(
+            "-word_vec_size",
+            type=int,
+            default=512,
+            help="Word embedding sizes",
+        )
+        opt.add_argument(
+            "-brnn",
+            action="store_true",
+            help="Use a bidirectional encoder",
+        )
+        opt.add_argument(
+            "-gpus",
+            default=[],
+            nargs="+",
+            type=int,
+            help="Use CUDA on the listed devices.",
+        )
+        opt.add_argument(
+            "-layers",
+            type=int,
+            default=1,
+            help="Number of layers in the LSTM encoder/decoder",
+        )
+        opt.add_argument(
+            "-dropout",
+            type=float,
+            default=0.3,
+            help="Dropout probability; applied between LSTM stacks.",
+        )
+        opt.add_argument(
+            "-input_feed",
+            type=int,
+            default=1,
+            help="""Feed the context vector at each time step as
+                            additional input (via concatenation with the word embeddings) to the decoder.""",
+        )
+        opt.add_argument(
+            "-has_attn",
+            type=int,
+            default=1,
+            help="""attn model or not""",
+        )
+        opt.add_argument(
+            "-cuda",
+            type=bool,
+            default=False,
+            help="""attn model or not""",
+        )
+        # opt.cuda = False
+        opt = opt.parse_args()
+        return opt
 
     def pad_list(short_list, target_length):
         return short_list + [-1] * (target_length - len(short_list))
@@ -1208,90 +1307,326 @@ elif args.model == "code_sum_drl":
 
         return merged_data_ds, merged_data_us, merged_data_cs
 
-    def create_dataset_for_code_sum()
-    # opt = argparse.ArgumentParser()
-    # opt.add_argument(
-    #     "-rnn_size", type=int, default=512, help="Size of LSTM hidden states,"
-    # )
-    # opt.add_argument(
-    #     "-word_vec_size",
-    #     type=int,
-    #     default=512,
-    #     help="Word embedding sizes",
-    # )
-    # opt.add_argument(
-    #     "-brnn",
-    #     action="store_true",
-    #     help="Use a bidirectional encoder",
-    # )
-    # opt.add_argument(
-    #     "-gpus",
-    #     default=[],
-    #     nargs="+",
-    #     type=int,
-    #     help="Use CUDA on the listed devices.",
-    # )
-    # opt.add_argument(
-    #     "-layers",
-    #     type=int,
-    #     default=1,
-    #     help="Number of layers in the LSTM encoder/decoder",
-    # )
-    # opt.add_argument(
-    #     "-dropout",
-    #     type=float,
-    #     default=0.3,
-    #     help="Dropout probability; applied between LSTM stacks.",
-    # )
-    # opt.add_argument(
-    #     "-input_feed",
-    #     type=int,
-    #     default=1,
-    #     help="""Feed the context vector at each time step as
-    #                     additional input (via concatenation with the word embeddings) to the decoder.""",
-    # )
-    # opt.add_argument(
-    #     "-has_attn",
-    #     type=int,
-    #     default=1,
-    #     help="""attn model or not""",
-    # )
-    # opt.add_argument(
-    #     "-cuda",
-    #     type=bool,
-    #     default=False,
-    #     help="""attn model or not""",
-    # )
-    # # opt.cuda = False
-    # opt = opt.parse_args()
+    def create_dataset_for_code_sum(merged_data, mode):
+        data_dir = "/store/travail/vamaj/Leto/src/code_sum_drl/dataset_clones/"
+        original_path = data_dir + "original/"
+        processed_path = data_dir + "processed/"
+        train_path = data_dir + "train/"
+        for index, row in tqdm(merged_data.iterrows(), total=len(merged_data)):
+            code_x = row["code_x"].replace("\n", " DCNL DCSP ")
+            code_y = row["code_y"].replace("\n", " DCNL DCSP ")
+            with open(processed_path + f"all_x_{mode}.code", "a") as code_x_file:
+                with open(
+                    processed_path + f"all_x_{mode}.comment", "a"
+                ) as comment_x_file:
+                    code_x_file.write(code_x + "\n")
+                    comment_x_file.write("useless drivel needed" + "\n")
+            with open(processed_path + f"all_y_{mode}.code", "a") as code_y_file:
+                with open(
+                    processed_path + f"all_y_{mode}.comment", "a"
+                ) as comment_y_file:
+                    code_y_file.write(code_y + "\n")
+                    comment_y_file.write("useless drivel needed" + "\n")
 
-    from datasets import load_dataset
-    import pandas as pd
+    def get_similar_codesum_ds():
+        dataset_similar_x = torch.load(
+            "/store/travail/vamaj/Leto/src/code_sum_drl/dataset_clones/train/processed_all_x_similar.train.pt"
+        )
+        dataset_similar_y = torch.load(
+            "/store/travail/vamaj/Leto/src/code_sum_drl/dataset_clones/train/processed_all_y_similar.train.pt"
+        )
+        indexes_x = {
+            v: i for i, v in enumerate(dataset_similar_x["train_xe"]["indexes"])
+        }
+        indexes_y = {
+            v: i for i, v in enumerate(dataset_similar_y["train_xe"]["indexes"])
+        }
+        shared_indexes_file_nums = set(indexes_x.keys()).intersection(
+            set(indexes_y.keys())
+        )
+        shared_indexes_x = [indexes_x[v] for v in shared_indexes_file_nums]
+        shared_indexes_y = [indexes_y[v] for v in shared_indexes_file_nums]
+        # shared_indexes = sorted(list(shared_indexes), reverse=True)
+        not_shared_indexes_x = [
+            i
+            for i in range(len(dataset_similar_x["train_xe"]["src"]))
+            if i not in shared_indexes_x
+        ]
+        not_shared_indexes_y = [
+            i
+            for i in range(len(dataset_similar_y["train_xe"]["src"]))
+            if i not in shared_indexes_y
+        ]
+        not_shared_indexes_x = sorted(not_shared_indexes_x, reverse=True)
+        not_shared_indexes_y = sorted(not_shared_indexes_y, reverse=True)
+        for index in not_shared_indexes_x:
+            del dataset_similar_x["train_xe"]["src"][index]
+            del dataset_similar_x["train_xe"]["tgt"][index]
+            del dataset_similar_x["train_xe"]["trees"][index]
+            del dataset_similar_x["train_xe"]["original_codes"][index]
+            del dataset_similar_x["train_xe"]["original_comments"][index]
+            del dataset_similar_x["train_pg"]["src"][index]
+            del dataset_similar_x["train_pg"]["tgt"][index]
+            del dataset_similar_x["train_pg"]["trees"][index]
+            del dataset_similar_x["train_pg"]["original_codes"][index]
+            del dataset_similar_x["train_pg"]["original_comments"][index]
 
+        for index in not_shared_indexes_y:
+            del dataset_similar_y["train_xe"]["src"][index]
+            del dataset_similar_y["train_xe"]["tgt"][index]
+            del dataset_similar_y["train_xe"]["trees"][index]
+            del dataset_similar_y["train_xe"]["original_codes"][index]
+            del dataset_similar_y["train_xe"]["original_comments"][index]
+            del dataset_similar_y["train_pg"]["src"][index]
+            del dataset_similar_y["train_pg"]["tgt"][index]
+            del dataset_similar_y["train_pg"]["trees"][index]
+            del dataset_similar_y["train_pg"]["original_codes"][index]
+            del dataset_similar_y["train_pg"]["original_comments"][index]
+
+        return dataset_similar_x, dataset_similar_y
+
+    def pre_process_for_code_sum(dataset_x, dataset_y):
+        def get_data_trees(trees):
+            data_trees = []
+            for t_json in trees:
+                for k, node in t_json.items():
+                    if node["parent"] == None:
+                        root_idx = k
+                tree = json2tree_binary(t_json, Tree(), root_idx)
+                data_trees.append(tree)
+
+            return data_trees
+
+        def get_data_leafs(trees, srcDicts):
+            leafs = []
+            for tree in trees:
+                leaf_contents = tree.leaf_contents()
+
+                leafs.append(srcDicts.convertToIdx(leaf_contents, Constants.UNK_WORD))
+            return leafs
+
+        dicts_x = dataset_x["dicts"]
+        dicts_y = dataset_y["dicts"]
+
+        dataset_x["train_xe"]["trees"] = get_data_trees(dataset_x["train_xe"]["trees"])
+        dataset_y["train_xe"]["trees"] = get_data_trees(dataset_y["train_xe"]["trees"])
+
+        # dataset_x["train_pg"]["trees"] = get_data_trees(dataset_x["train_pg"]["trees"])
+        # dataset_y["train_pg"]["trees"] = get_data_trees(dataset_y["train_pg"]["trees"])
+
+        # dataset_x["valid"]["trees"] = get_data_trees(dataset_x["valid"]["trees"])
+        # dataset_y["valid"]["trees"] = get_data_trees(dataset_y["valid"]["trees"])
+
+        # dataset_x["test"]["trees"] = get_data_trees(dataset_x["test"]["trees"])
+        # dataset_y["test"]["trees"] = get_data_trees(dataset_y["test"]["trees"])
+
+        dataset_x["train_xe"]["leafs"] = get_data_leafs(
+            dataset_x["train_xe"]["trees"],
+            dicts_x["src"],
+        )
+        dataset_y["train_xe"]["leafs"] = get_data_leafs(
+            dataset_y["train_xe"]["trees"],
+            dicts_y["src"],
+        )
+
+        # dataset_x["train_pg"]["leafs"] = get_data_leafs(
+        #     dataset_x["train_pg"]["trees"],
+        #     dicts_x["src"],
+        # )
+        # dataset_y["train_pg"]["leafs"] = get_data_leafs(
+        #     dataset_y["train_pg"]["trees"],
+        #     dicts_y["src"],
+        # )
+
+        # dataset_x["valid"]["leafs"] = get_data_leafs(
+        #     dataset_x["valid"]["trees"],
+        #     dicts_x["src"],
+        # )
+        # dataset_y["valid"]["leafs"] = get_data_leafs(
+        #     dataset_y["valid"]["trees"],
+        #     dicts_y["src"],
+        # )
+
+        # dataset_x["test"]["leafs"] = get_data_leafs(
+        #     dataset_x["test"]["trees"],
+        #     dicts_x["src"],
+        # )
+        # dataset_y["test"]["leafs"] = get_data_leafs(
+        #     dataset_y["test"]["trees"],
+        #     dicts_y["src"],
+        # )
+
+        train_set_x = CodeSumDataset(
+            dataset_x["train_xe"],
+            1,
+            False,
+            eval=False,
+        )
+        train_set_y = CodeSumDataset(
+            dataset_y["train_xe"],
+            1,
+            False,
+            eval=False,
+        )
+
+        return train_set_x, train_set_y
+
+    def get_model_embeddings(
+        opt, x_dicts, y_dicts, train_set_x, train_set_y, mode="trained"
+    ):
+        embs_x_all, embs_y_all = [], []
+
+        code_encoder = lib.TreeEncoder(opt, x_dicts["src"])
+        text_encoder = lib.Encoder(opt, x_dicts["src"])
+        decoder = lib.HybridDecoder(opt, x_dicts["tgt"])
+        generator = lib.BaseGenerator(
+            torch.nn.Linear(opt.rnn_size, x_dicts["tgt"].size()), opt
+        )
+        model = lib.Hybrid2SeqModel(
+            code_encoder,
+            text_encoder,
+            decoder,
+            generator,
+            opt,
+        )
+
+        model = lib.Hybrid2SeqModel(
+            code_encoder,
+            text_encoder,
+            decoder,
+            generator,
+            opt,
+        )
+        if mode == "trained":
+            checkpoint = torch.load(
+                os.path.join(
+                    os.getcwd(),
+                    "src",
+                    args.model,
+                    "models",
+                    "model_state.pt",
+                ),
+                map_location=torch.device("cpu"),
+            )
+            model = checkpoint["model"]
+
+        model.opt.cuda = False
+        model.opt.cuda = False
+
+        try:
+            for batches in tqdm(zip(train_set_x, train_set_y), total=len(train_set_x)):
+                try:
+                    batch_x = batches[0]
+                    batch_y = batches[1]
+
+                    embds_x = get_embeddings_code_sum_drl(
+                        (
+                            batch_x[0],
+                            batch_x[1],
+                            batch_x[2],
+                            batch_x[3],
+                        ),
+                        model,
+                    )
+                    embs_y = get_embeddings_code_sum_drl(
+                        (
+                            batch_y[0],
+                            batch_y[1],
+                            batch_y[2],
+                            batch_y[3],
+                        ),
+                        model,
+                    )
+                    embs_x_all.append(embds_x)
+                    embs_y_all.append(embs_y)
+                except:
+                    pass
+        except AssertionError:
+            pass
+
+        return embs_x_all, embs_y_all
+
+    def compare_embeddings(embeddings_x, embeddings_y):
+        similarities = []
+        for embedding_x, embedding_y in tqdm(
+            zip(embeddings_x, embeddings_y), total=len(embeddings_x)
+        ):
+            try:
+                embedding_x = embedding_x.reshape(-1)
+                embedding_y = embedding_y.reshape(-1)
+
+                embedding_x = torch.nn.functional.normalize(embedding_x, dim=0)
+                embedding_y = torch.nn.functional.normalize(embedding_y, dim=0)
+                # Calculate the cosine similarity
+                cosine_similarity = (
+                    torch.dot(embedding_x, embedding_y)
+                    / (
+                        (
+                            torch.linalg.norm(embedding_x)
+                            * torch.linalg.norm(embedding_y)
+                        )
+                    )
+                ).item()
+
+                similarities.append(cosine_similarity)
+            except:
+                pass
+
+        return sum(similarities) / len(similarities)
+
+    opt = get_opt()
+
+    #! load the clone dataset and save it as a csv. not needed a second time
     # dataset = load_dataset("PoolC/1-fold-clone-detection-600k-5fold")
     # dataset['train'].to_csv("/store/travail/vamaj/Leto/src/code_sum_drl/dataset/clones.csv", index=False)
-    dataset = pd.read_csv(
-        "/store/travail/vamaj/Leto/src/code_sum_drl/dataset/clones.csv"
+
+    # dataset = pd.read_csv(
+    #     "/store/travail/vamaj/Leto/src/code_sum_drl/dataset/clones.csv"
+    # )
+    # dataset.drop(
+    #     columns=["pair_id", "question_pair_id", "code1_group", "code2_group"],
+    #     inplace=True,
+    # )
+    # dataset.columns = ["code_x", "code_y", "label"]
+    # merged_data_similar = dataset[dataset["label"] == 1]
+    # merged_data_dissimilar = dataset[dataset["label"] == 0]
+
+    # create_dataset_for_code_sum(merged_data_similar, "similar")
+    # create_dataset_for_code_sum(merged_data_dissimilar, "dissimilar")
+    # ds_sim, us_sim, cs_sim = get_similarity_from_asts(
+    #     merged_data_similar.sample(n=10000)
+    # )
+    # print(f"Average of Ds - similar: {sum(ds_sim)/len(ds_sim)}")
+    # print(f"Averagen of Cs - similar: {sum(cs_sim)/len(cs_sim)}")
+    # print(f"Average of Us - similar: {sum(us_sim)/len(us_sim)}")
+
+    # ds_sim, us_sim, cs_sim = get_similarity_from_asts(
+    #     merged_data_dissimilar.sample(n=10000)
+    # )
+    # print(f"Average of Ds - dissimilar: {sum(ds_sim)/len(ds_sim)}")
+    # print(f"Averagen of Cs - dissimilar: {sum(cs_sim)/len(cs_sim)}")
+    # print(f"Average of Us - dissimilar: {sum(us_sim)/len(us_sim)}")
+
+    dataset_similar_x, dataset_similar_y = get_similar_codesum_ds()
+    x_dicts, y_dicts = dataset_similar_x["dicts"], dataset_similar_y["dicts"]
+    train_set_x, train_set_y = pre_process_for_code_sum(
+        dataset_similar_x, dataset_similar_y
     )
-    dataset.drop(
-        columns=["pair_id", "question_pair_id", "code1_group", "code2_group"],
-        inplace=True,
+    # for i in range(len(train_set_x)):
+    #     batch = train_set_x[i]
+    #     ds = [dcu["d"] for dcu in batch[6]]
+    #     cs = [dcu["c"] for dcu in batch[6]]
+    #     us = [dcu["u"] for dcu in batch[6]]
+
+    #     max_d = max(max_d, max([len(d) for d in ds]))
+    #     max_c = max(max_c, max([len(c) for c in cs]))
+    #     max_u = max(max_u, max([len(u) for u in us]))
+
+    embs_x_similar_trained, embs_y_similar_trained = get_model_embeddings(
+        opt, x_dicts, y_dicts, train_set_x, train_set_y, "trained"
     )
-    dataset.columns = ["code_x", "code_y", "label"]
-    merged_data_similar = dataset[dataset["label"] == 1]
-    merged_data_dissimilar = dataset[dataset["label"] == 0]
-
-    ds_sim, us_sim, cs_sim = get_similarity_from_asts(merged_data_similar.sample(n=10000))
-    print(f"Average of Ds - similar: {sum(ds_sim)/len(ds_sim)}")
-    print(f"Averagen of Cs - similar: {sum(cs_sim)/len(cs_sim)}")
-    print(f"Average of Us - similar: {sum(us_sim)/len(us_sim)}")
-    
-    ds_sim, us_sim, cs_sim = get_similarity_from_asts(merged_data_dissimilar.sample(n=10000))
-    print(f"Average of Ds - dissimilar: {sum(ds_sim)/len(ds_sim)}")
-    print(f"Averagen of Cs - dissimilar: {sum(cs_sim)/len(cs_sim)}")
-    print(f"Average of Us - dissimilar: {sum(us_sim)/len(us_sim)}")
-    
-
-    # Your code to load and process the dataset
-
-    # Save the dataset as a CSV file
+    compare_embeddings(embs_x_similar_trained, embs_y_similar_trained)
+    embs_x_similar_untrained, embs_y_similar_untrained = get_model_embeddings(
+        opt, x_dicts, y_dicts, train_set_x, train_set_y, "untrained"
+    )
+    print("hi")
