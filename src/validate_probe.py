@@ -146,14 +146,14 @@ if args.model == "ast_nn":
 
         return similarity
 
-    def average_cosine_similarity(C1:list, C2:list)->float:
+    def average_cosine_similarity(C1: list, C2: list) -> float:
         """
         Calculate the average cosine similarity between two lists of lists.
-        
+
         Args:
             C1 (list): The first list of lists.
             C2 (list): The second list of lists.
-        
+
         Returns:
             avg_similarity (float): The average cosine similarity between the two lists of lists.
         """
@@ -172,7 +172,7 @@ if args.model == "ast_nn":
         avg_similarity = sum(similarities) / len(similarities)
         return avg_similarity
 
-    def calculate_similarity(row:pd.Series)->tuple:
+    def calculate_similarity(row: pd.Series) -> tuple:
         """
         1 - Code is converted to AST-NN's required representation.
         2 - The cosine similarity between the D, C, U representations of the two codes is calculated.
@@ -186,7 +186,7 @@ if args.model == "ast_nn":
             average_cosine_similarity(tests1["c"], tests2["c"]),
         )
 
-    def get_similarity_from_asts(merged_data:pd.DataFrame)->tuple:
+    def get_similarity_from_asts(merged_data: pd.DataFrame) -> tuple:
         """
         Calculate the D,C,U similarity for the given dataset.
         """
@@ -470,8 +470,9 @@ if args.model == "ast_nn":
 
         return sum(similarities) / len(similarities)
 
+    # get DCU similarity for the similar and dissimilar pairs
     get_initial_data()
-    
+    # get emebdding similarity for the similar and dissimilar pairs
     cosine_sim_similar_trained = compare_embeddings(
         model="untrained",
         mode="similar",
