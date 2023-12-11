@@ -1534,6 +1534,81 @@ elif args.model == "code_sum_drl":
 
         return dataset_similar_x, dataset_similar_y
 
+    def get_dissimlars_codesum_ds():
+        dataset_dissimilar_x = torch.load(
+            os.path.join(
+                os.getcwd(),
+                "src",
+                "code_sum_drl",
+                "dataset_clones",
+                "train",
+                "processed_all_x_dissimilar.train.pt",
+            )
+        )
+        dataset_dissimilar_y = torch.load(
+            os.path.join(
+                os.getcwd(),
+                "src",
+                "code_sum_drl",
+                "dataset_clones",
+                "train",
+                "processed_all_y_dissimilar.train.pt",
+            )
+        )
+
+        indexes_x = {
+            v: i for i, v in enumerate(dataset_dissimilar_x["train_xe"]["indexes"])
+        }
+        indexes_y = {
+            v: i for i, v in enumerate(dataset_dissimilar_y["train_xe"]["indexes"])
+        }
+
+        shared_indexes_file_nums = set(indexes_x.keys()).intersection(
+            set(indexes_y.keys())
+        )
+        shared_indexes_x = [indexes_x[v] for v in shared_indexes_file_nums]
+        shared_indexes_y = [indexes_y[v] for v in shared_indexes_file_nums]
+        # shared_indexes = sorted(list(shared_indexes), reverse=True)
+        not_shared_indexes_x = [
+            i
+            for i in range(len(dataset_dissimilar_x["train_xe"]["src"]))
+            if i not in shared_indexes_x
+        ]
+        not_shared_indexes_y = [
+            i
+            for i in range(len(dataset_dissimilar_y["train_xe"]["src"]))
+            if i not in shared_indexes_y
+        ]
+
+        not_shared_indexes_x = sorted(not_shared_indexes_x, reverse=True)
+        not_shared_indexes_y = sorted(not_shared_indexes_y, reverse=True)
+
+        for index in not_shared_indexes_x:
+            del dataset_dissimilar_x["train_xe"]["src"][index]
+            del dataset_dissimilar_x["train_xe"]["tgt"][index]
+            del dataset_dissimilar_x["train_xe"]["trees"][index]
+            del dataset_dissimilar_x["train_xe"]["original_codes"][index]
+            del dataset_dissimilar_x["train_xe"]["original_comments"][index]
+            del dataset_dissimilar_x["train_pg"]["src"][index]
+            del dataset_dissimilar_x["train_pg"]["tgt"][index]
+            del dataset_dissimilar_x["train_pg"]["trees"][index]
+            del dataset_dissimilar_x["train_pg"]["original_codes"][index]
+            del dataset_dissimilar_x["train_pg"]["original_comments"][index]
+
+        for index in not_shared_indexes_y:
+            del dataset_dissimilar_y["train_xe"]["src"][index]
+            del dataset_dissimilar_y["train_xe"]["tgt"][index]
+            del dataset_dissimilar_y["train_xe"]["trees"][index]
+            del dataset_dissimilar_y["train_xe"]["original_codes"][index]
+            del dataset_dissimilar_y["train_xe"]["original_comments"][index]
+            del dataset_dissimilar_y["train_pg"]["src"][index]
+            del dataset_dissimilar_y["train_pg"]["tgt"][index]
+            del dataset_dissimilar_y["train_pg"]["trees"][index]
+            del dataset_dissimilar_y["train_pg"]["original_codes"][index]
+            del dataset_dissimilar_y["train_pg"]["original_comments"][index]
+
+        return dataset_dissimilar_x, dataset_dissimilar_y
+
     def pre_process_for_code_sum(dataset_x, dataset_y):
         def get_data_trees(trees):
             data_trees = []
@@ -1766,4 +1841,42 @@ elif args.model == "code_sum_drl":
     )
     print(
         "Cosine similarity between similars - untrained: ", cosin_sim_untrained_similar
+    )
+
+    dataset_dissimilar_x, dataset_dissimilar_y = get_dissimlars_codesum_ds()
+    x_dicts, y_dicts = dataset_dissimilar_x["dicts"], dataset_dissimilar_y["dicts"]
+    train_set_x, train_set_y = pre_process_for_code_sum(
+        dataset_dissimilar_x, dataset_dissimilar_y
+    )
+
+    embs_x_dissimilar_trained, embs_y_dissimilar_trained = get_model_embeddings(
+        opt,
+        x_dicts,
+        y_dicts,
+        train_set_x,
+        train_set_y,
+        "trained",
+    )
+    cosin_sim_trained_dissimilar = compare_embeddings(
+        embs_x_dissimilar_trained, embs_y_dissimilar_trained
+    )
+    print(
+        "Cosine similarity between dissimilars - trained: ",
+        cosin_sim_trained_dissimilar,
+    )
+
+    embs_x_dissimilar_untrained, embs_y_dissimilar_untrained = get_model_embeddings(
+        opt,
+        x_dicts,
+        y_dicts,
+        train_set_x,
+        train_set_y,
+        "untrained",
+    )
+    cosin_sim_untrained_dissimilar = compare_embeddings(
+        embs_x_dissimilar_untrained, embs_y_dissimilar_untrained
+    )
+    print(
+        "Cosine similarity between dissimilars - untrained: ",
+        cosin_sim_untrained_dissimilar,
     )
