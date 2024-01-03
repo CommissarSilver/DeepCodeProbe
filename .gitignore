@@ -1,6 +1,7 @@
 *.pyc
 *.gz
 *.bin
+*.pt
 .vscode
 .DS_Store
 dataset.zip
