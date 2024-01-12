@@ -177,7 +177,9 @@ class BatchProgramCC(nn.Module):
         def tree_to_index(node):
             token = node.token
             result = [
-                self.vocab.key_to_index[token] if token in self.vocab else self.max_token
+                self.vocab.key_to_index[token]
+                if token in self.vocab
+                else self.max_token
             ]
             children = node.children
 
@@ -198,7 +200,9 @@ class BatchProgramCC(nn.Module):
         try:
             code_trees = [trans2seq(code_ast) for code_ast in code_asts]
             x = [
-                self.vocab.key_to_index[token] if token in self.vocab else self.max_token
+                self.vocab.key_to_index[token]
+                if token in self.vocab
+                else self.max_token
                 for token in input_batch[0].split()
             ]
             # logger.info("Finished converting AST to index representation")
@@ -288,3 +292,8 @@ class BatchProgramCC(nn.Module):
 
         y = torch.sigmoid(self.hidden2label(abs_dist))
         return y
+
+    def forward_att(self, x1, x2):
+        lvec, rvec = self.encode(x1)[0], self.encode(x2)[0]
+
+        return lvec, rvec
