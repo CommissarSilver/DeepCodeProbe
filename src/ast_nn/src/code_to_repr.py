@@ -155,7 +155,7 @@ class TokenIndexerC:
                 self.add_token(token.split("at")[0].replace(" ", ""))
         # return the list of indices
         return [
-            self.get_index(token.split("at")[0]).replace(" ", "")
+            self.get_index(token.split("at")[0].replace(" ", ""))
             for token in token_list
         ]
 
@@ -244,8 +244,11 @@ def ast_to_index(tree, visitor, language, indexer):
 
 
 def code_to_index(code, language, indexer):
-    tree, out = code_to_ast(code, language)
-    return ast_to_index(tree, out, language, indexer)
+    try:
+        tree, out = code_to_ast(code, language)
+        return ast_to_index(tree, out, language, indexer)
+    except:
+        return {"d": [], "c": [], "u": []}
 
 
 if __name__ == "__main__":
