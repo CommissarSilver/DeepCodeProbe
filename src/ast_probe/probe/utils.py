@@ -18,7 +18,7 @@ def get_embeddings_astnn(all_inputs, model, **kwargs):
         _type_: the intermediate outputs of the model
     """
     with torch.no_grad():
-        _, embs = model.encode(all_inputs)
+        embs, _ = model.encode(all_inputs)
     return embs
 
 
@@ -97,37 +97,23 @@ def collator_fn_astnn(batch):
     ds = [b["d"] for b in batch]
     us = [b["u"] for b in batch]
 
-    batch_len_tokens = np.max([len(m) for m in ds])
+    batch_len_tokens_d = np.max([len(m) for m in ds])
+    batch_len_tokens_c = np.max([len(m) for m in cs])
+    batch_len_tokens_u = np.max([len(m) for m in us])
 
-    max_len_c_tokens = 0
-    for children_tokens in cs:
-        for child_tokens in children_tokens:
-            max_len_c_tokens = max(max_len_c_tokens, len(child_tokens))
-
-    ds = [d + [-1] * (batch_len_tokens - len(d)) for d in ds]
-
-    all_cs = []
-    for children_tokens in cs:
-        all_cs_children = []
-        for child_tokens in children_tokens:
-            new_child = child_tokens + [-1] * (max_len_c_tokens - len(child_tokens))
-            all_cs_children.append(new_child)
-        all_cs.append(
-            all_cs_children
-            + [[-1] * max_len_c_tokens] * (batch_len_tokens - len(all_cs_children))
-        )
-
-    us = [u + [-1] * (batch_len_tokens - len(u)) for u in us]
+    ds = [d + [-1] * (batch_len_tokens_d - len(d)) for d in ds]
+    cs = [c + [-1] * (batch_len_tokens_c - len(c)) for c in cs]
+    us = [u + [-1] * (batch_len_tokens_u - len(u)) for u in us]
 
     ds_tensor = torch.tensor(ds)
-    cs_tensor = torch.tensor(all_cs)
+    cs_tensor = torch.tensor(cs)
     us_tensor = torch.tensor(us)
 
     return (
         ds_tensor,
         cs_tensor,
         us_tensor,
-        torch.tensor(batch_len_tokens),
+        torch.tensor(batch_len_tokens_c),
         original_code_string,
     )
 
