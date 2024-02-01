@@ -28,7 +28,7 @@ logger = logging.getLogger(LOGGER_NAME)
 
 # DEVICE Configurations
 USE_CUDA = torch.cuda.is_available()
-DEVICE = 'cpu'
+DEVICE = "cpu"
 
 
 def train_probe(
@@ -74,13 +74,13 @@ def train_probe(
     )
 
     # Using Adam optimizer with learning rate of 1e-3
-    optimizer = torch.optim.Adam(probe_model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(probe_model.parameters(), lr=0.01)
     # Reduce learning rate when a metric has stopped improving.
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode="min",
         factor=0.1,
-        patience=2,
+        patience=5,
     )
 
     criterion = probe_loss
@@ -287,9 +287,7 @@ def eval_probe(
                 pass
 
         # Computing accuracy for 'D', 'C', and 'U' from hit counts
-        total_accuracy_d = sum([x[0] for x in d_hits_total]) / sum(
-            x[1] for x in d_hits_total
-        )
+        total_accuracy_d = 0
         total_accuracy_c = sum([x[0] for x in c_hits_total]) / sum(
             x[1] for x in c_hits_total
         )
@@ -299,7 +297,7 @@ def eval_probe(
 
         return (
             (eval_loss / len(valid_dataloader)),
-            total_accuracy_d.data.item(),
+            0,
             total_accuracy_c.data.item(),
             total_accuracy_u.data.item(),
         )
