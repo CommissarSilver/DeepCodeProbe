@@ -177,7 +177,11 @@ class BatchProgramCC(nn.Module):
         def tree_to_index(node):
             token = node.token
             result = [
-                self.vocab.key_to_index[token] if token in self.vocab else self.max_token
+                (
+                    self.vocab.key_to_index[token]
+                    if token in self.vocab
+                    else self.max_token
+                )
             ]
             children = node.children
 
@@ -198,7 +202,11 @@ class BatchProgramCC(nn.Module):
         try:
             code_trees = [trans2seq(code_ast) for code_ast in code_asts]
             x = [
-                self.vocab.key_to_index[token] if token in self.vocab else self.max_token
+                (
+                    self.vocab.key_to_index[token]
+                    if token in self.vocab
+                    else self.max_token
+                )
                 for token in input_batch[0].split()
             ]
             # logger.info("Finished converting AST to index representation")
@@ -239,6 +247,7 @@ class BatchProgramCC(nn.Module):
         return zeros
 
     def encode(self, x):
+        #! This line should be turned off when training the original AST-NN model
         x = self.process_input(x)
 
         lens = [len(item) for item in x]

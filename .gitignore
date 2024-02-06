@@ -3,6 +3,7 @@
 *.bin
 *.pt
 *.json
+*.json
 .vscode
 .DS_Store
 dataset.zip

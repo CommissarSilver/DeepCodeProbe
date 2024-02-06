@@ -411,7 +411,10 @@ def train_probe_code_sum_drl(
 
             metrics["training_loss"].append(round(sum(training_loss), 4))
             metrics["validation_loss"].append(round(eval_loss, 4))
-
+            metrics["D_accuracy"].append(round(acc_d, 4))
+            metrics["C_accuracy"].append(round(acc_c, 4))
+            metrics["U_accuracy"].append(round(acc_u, 4))
+            
             if eval_loss < best_eval_loss:
                 logger.info("Saving model checkpoint")
                 if not os.path.exists(output_path):
