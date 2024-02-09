@@ -153,7 +153,7 @@ def collator_fn_sum_tf(batch):
     ds = [b["d"] for b in batch]
     us = [b["u"] for b in batch]
 
-    batch_len_tokens = np.max([len(m) for m in ds])
+    batch_len_tokens = np.max([len(m) for m in cs])
     batch_len_cs = np.max([len(m) for m in cs])
     batch_len_us = np.max([len(m) for m in us])
 
