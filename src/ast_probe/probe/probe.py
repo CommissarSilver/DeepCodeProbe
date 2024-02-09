@@ -205,14 +205,14 @@ class SumTFParserProbe(Probe):
         tansformerd_pooled = torch.mean(batch, dim=1)
         # transformed = torch.matmul(batch, self.proj)
 
-        ds_pred = torch.matmul(tansformerd_pooled, self.vectors_d)
-        ds_pred = ds_pred.view(ds_pred.shape[0], self.number_vectors_d, 2)
+        # ds_pred = torch.matmul(tansformerd_pooled, self.vectors_d)
+        # ds_pred = ds_pred.view(ds_pred.shape[0], self.number_vectors_d, 2)
 
         cs_pred = torch.matmul(tansformerd_pooled, self.vectors_c)
 
         us_pred = torch.matmul(tansformerd_pooled, self.vectors_u)
 
-        return (ds_pred, cs_pred, us_pred)
+        return (torch.Tensor([]), cs_pred, us_pred)
 
 
 class CodeSumDRLarserProbe(Probe):
