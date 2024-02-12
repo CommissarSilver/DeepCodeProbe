@@ -367,16 +367,15 @@ class ParserLossCodeSumDRL(nn.Module):
             the accumulated loss of d,c,u
         """
         # unlike ASTNN, there is a need to match the lengths of d_pred and d_real
-
-        d_real = torch.tensor([d + [-1] * (d_pred.shape[1] - len(d)) for d in d_real])
         c_real = torch.tensor([c + [-1] * (c_pred.shape[1] - len(c)) for c in c_real])
         u_real = torch.tensor([u + [-1] * (u_pred.shape[1] - len(u)) for u in u_real])
-
-        loss_d = self.ds(d_pred, d_real)
         loss_c = self.cs(c_pred, c_real)
-        loss_u = self.us(u_pred, u_real)
 
-        return loss_d + loss_c + loss_u
+        loss_u = self.us(
+            u_pred, u_real
+        )  # same as loss_d, there is no need to match u_pred and u_real lengths
+
+        return loss_c + loss_u
 
     @staticmethod
     def calculate_hits(d_pred, c_pred, u_pred, d_real, c_real, u_real):
@@ -398,19 +397,17 @@ class ParserLossCodeSumDRL(nn.Module):
             _type_: the number of correct predictions for d,c,u
         """
 
-        d_real = torch.tensor([d + [-1] * (d_pred.shape[1] - len(d)) for d in d_real])
         c_real = torch.tensor([c + [-1] * (c_pred.shape[1] - len(c)) for c in c_real])
         u_real = torch.tensor([u + [-1] * (u_pred.shape[1] - len(u)) for u in u_real])
-
-        d_hits = torch.round(d_pred).eq(d_real).sum().item()
-        c_hits = torch.round(c_pred).eq(c_real).sum().item()
+        # d_hits = torch.round(d_pred).eq(d_real).sum().item()
         u_hits = torch.round(u_pred).eq(u_real).sum().item()
+        c_hits = torch.round(c_pred).eq(c_real).sum().item()
 
         return (
-            d_hits,
+            0,
             c_hits,
             u_hits,
-            d_pred.size(0) * d_pred.size(1),
-            c_real.size(0) * c_real.size(1),
-            u_real.size(0) * u_real.size(1),
+            0,
+            (c_pred.size(0) * c_pred.size(1)),
+            (u_pred.size(0) * u_pred.size(1)),
         )
