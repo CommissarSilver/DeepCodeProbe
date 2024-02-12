@@ -170,7 +170,7 @@ def extract_lists(ast_info):
 
         if "children" in node_info:
             children = node_info["children"]
-            C.append(len(children))
+            C.append(1 if len(children) > 1 else 0)
             for child in children:
                 process_node(child)
         else:
@@ -230,7 +230,7 @@ def code_to_index(code: str):
 
 if __name__ == "__main__":
     path_to_code = (
-        "/Users/ahura/Nexus/Leto/src/code_sum_drl/dataset/train/train0.60.20.2.code"
+        "/store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/train0.60.20.2.code"
     )
     codes = open(path_to_code).readlines()
     errors = 0
