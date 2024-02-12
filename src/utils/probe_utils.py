@@ -298,8 +298,8 @@ def eval_probe(
         return (
             (eval_loss / len(valid_dataloader)),
             0,
-            total_accuracy_c.data.item(),
-            total_accuracy_u.data.item(),
+            total_accuracy_c,
+            total_accuracy_u,
         )
 
 
@@ -410,6 +410,9 @@ def train_probe_code_sum_drl(
             metrics["training_loss"].append(round(sum(training_loss), 4))
             metrics["validation_loss"].append(round(eval_loss, 4))
 
+            metrics["D_accuracy"].append(round(acc_d, 4))
+            metrics["C_accuracy"].append(round(acc_c, 4))
+            metrics["U_accuracy"].append(round(acc_u, 4))
             if eval_loss < best_eval_loss:
                 logger.info("Saving model checkpoint")
                 if not os.path.exists(output_path):
@@ -518,9 +521,7 @@ def eval_probe_code_sum_drl(
             u_hits_total.append((u_hits, u_hits_len))
 
         # Computing accuracy for 'D', 'C', and 'U' from hit counts
-        total_accuracy_d = sum([x[0] for x in d_hits_total]) / sum(
-            x[1] for x in d_hits_total
-        )
+        total_accuracy_d = 0
         total_accuracy_c = sum([x[0] for x in c_hits_total]) / sum(
             x[1] for x in c_hits_total
         )
