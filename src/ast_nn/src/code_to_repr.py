@@ -112,8 +112,11 @@ def ast_to_index(tree, language):
 
 
 def code_to_index(code, language):
-    tree = code_to_ast(code, language)
-    return ast_to_index(tree, language)
+    try:
+        tree = code_to_ast(code, language)
+        return ast_to_index(tree, language)
+    except:
+        return {"d": [], "c": [], "u": []}
 
 
 if __name__ == "__main__":
