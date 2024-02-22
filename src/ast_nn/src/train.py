@@ -26,7 +26,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Choose a dataset:[c|java]")
-    parser.add_argument("--lang",default='c')
+    parser.add_argument("--lang", default="java")
     args = parser.parse_args()
     if not args.lang:
         print("No specified dataset")
@@ -52,10 +52,10 @@ if __name__ == "__main__":
     embeddings = np.zeros((MAX_TOKENS + 1, EMBEDDING_DIM), dtype="float32")
     embeddings[: word2vec.vectors.shape[0]] = word2vec.vectors
 
-    HIDDEN_DIM = 100
-    ENCODE_DIM = 128
+    HIDDEN_DIM = 256
+    ENCODE_DIM = 256
     LABELS = 1
-    EPOCHS = 5
+    EPOCHS = 7
     BATCH_SIZE = 32
     USE_GPU = False
 
@@ -129,7 +129,7 @@ if __name__ == "__main__":
                 "src",
                 "ast_nn",
                 "models",
-                "astnn_" + str.upper(lang) + "_" + str(t) + ".pkl",
+                "astnn_" + str.upper(lang) + "_" + str(t) + f"_{HIDDEN_DIM}" + ".pkl",
             ),
         )
         print("Testing-%d..." % t)
