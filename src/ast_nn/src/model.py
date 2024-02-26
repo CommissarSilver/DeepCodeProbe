@@ -171,7 +171,7 @@ class BatchProgramCC(nn.Module):
             # logger.info("Finished parsing single input")
         except Exception as e:
             # logger.exception("There was a problem in parsing the input: %s", e)
-            raise e
+            pass
 
         # convert AST to index representation
         def tree_to_index(node):
@@ -247,48 +247,50 @@ class BatchProgramCC(nn.Module):
         return zeros
 
     def encode(self, x):
-        #! This line should be turned off when training the original AST-NN model
-        x = self.process_input(x)
+        try:
+            x = self.process_input(x)
 
-        lens = [len(item) for item in x]
-        max_len = max(lens)
+            lens = [len(item) for item in x]
+            max_len = max(lens)
 
-        encodes = []
-        for i in range(self.batch_size):
-            for j in range(lens[i]):
-                encodes.append(x[i][j])
+            encodes = []
+            for i in range(self.batch_size):
+                for j in range(lens[i]):
+                    encodes.append(x[i][j])
 
-        encodes = self.encoder(encodes, sum(lens))
-        seq, start, end = [], 0, 0
-        for i in range(self.batch_size):
-            end += lens[i]
-            seq.append(encodes[start:end])
-            if max_len - lens[i]:
-                seq.append(self.get_zeros(max_len - lens[i]))
-            start = end
+            encodes = self.encoder(encodes, sum(lens))
+            seq, start, end = [], 0, 0
+            for i in range(self.batch_size):
+                end += lens[i]
+                seq.append(encodes[start:end])
+                if max_len - lens[i]:
+                    seq.append(self.get_zeros(max_len - lens[i]))
+                start = end
 
-        encodes = torch.cat(seq)
-        encodes = encodes.view(self.batch_size, max_len, -1)
-        # since enforce_sorted is not supported in this pytorch version, we need to do it manually
-        lengths, perm_idx = torch.LongTensor(lens).sort(0, descending=True)
-        encodes = encodes[perm_idx]
-        _, unperm_idx = perm_idx.sort(0, descending=False)
+            encodes = torch.cat(seq)
+            encodes = encodes.view(self.batch_size, max_len, -1)
+            # since enforce_sorted is not supported in this pytorch version, we need to do it manually
+            lengths, perm_idx = torch.LongTensor(lens).sort(0, descending=True)
+            encodes = encodes[perm_idx]
+            _, unperm_idx = perm_idx.sort(0, descending=False)
 
-        encodes = nn.utils.rnn.pack_padded_sequence(encodes, lengths, True)
+            encodes = nn.utils.rnn.pack_padded_sequence(encodes, lengths, True)
 
-        # return encodes
+            # return encodes
 
-        gru_out, _ = self.bigru(encodes, self.hidden)
-        gru_out_hidden, _ = nn.utils.rnn.pad_packed_sequence(
-            gru_out, batch_first=True, padding_value=-1e9
-        )
-        gru_out_hidden = gru_out_hidden[unperm_idx]
-        gru_out_hidden = torch.transpose(gru_out_hidden, 1, 2)
-        # pooling
-        gru_out = F.max_pool1d(gru_out_hidden, gru_out_hidden.size(2)).squeeze(2)
-        # gru_out = gru_out[:,-1]
+            gru_out, _ = self.bigru(encodes, self.hidden)
+            gru_out_hidden, _ = nn.utils.rnn.pad_packed_sequence(
+                gru_out, batch_first=True, padding_value=-1e9
+            )
+            gru_out_hidden = gru_out_hidden[unperm_idx]
+            gru_out_hidden = torch.transpose(gru_out_hidden, 1, 2)
+            # pooling
+            gru_out = F.max_pool1d(gru_out_hidden, gru_out_hidden.size(2)).squeeze(2)
+            # gru_out = gru_out[:,-1]
 
-        return gru_out, gru_out_hidden
+            return gru_out, gru_out_hidden
+        except:
+            return torch.zeros(self.batch_size, 512), torch.zeros(self.batch_size, 512)
 
     def forward(self, x1, x2):
         lvec, rvec = self.encode(x1)[0], self.encode(x2)[0]
