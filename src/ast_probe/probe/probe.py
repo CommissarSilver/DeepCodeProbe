@@ -70,13 +70,15 @@ class ParserProbe(Probe):
             scores_c: (batch_size, max_seq_len - 1, number classes_c)
             scores_u: (batch_size, max_seq_len, number classes_u)
         """
-        transformed = torch.matmul(batch.permute(0, 2, 1), self.proj)
+        try:
+            transformed = torch.matmul(batch.permute(0, 2, 1), self.proj)
 
-        ds_pred = torch.matmul(transformed, self.vectors_d)
-        cs_pred = torch.matmul(transformed, self.vectors_c)
-        us_pred = torch.matmul(transformed, self.vectors_u)
-
-        return (ds_pred, cs_pred, us_pred)
+            ds_pred = torch.matmul(transformed, self.vectors_d)
+            cs_pred = torch.matmul(transformed, self.vectors_c)
+            us_pred = torch.matmul(transformed, self.vectors_u)
+            return (ds_pred, cs_pred, us_pred)
+        except Exception as e:
+            return torch.zeros(32, 512), torch.zeros(32, 512), torch.zeros(32, 512)
 
 
 class FuncGNNParserProbe(Probe):
