@@ -287,15 +287,25 @@ def eval_probe(
                 pass
 
         # Computing accuracy for 'D', 'C', and 'U' from hit counts
-        total_accuracy_d = sum([x[0] for x in d_hits_total]) / sum(
+        try:
+            total_accuracy_d = sum([x[0] for x in d_hits_total]) / sum(
             x[1] for x in d_hits_total
         )
-        total_accuracy_c = sum([x[0] for x in c_hits_total]) / sum(
+        except ZeroDivisionError:
+            total_accuracy_d = torch.Tensor([0.0])
+        try:
+
+            total_accuracy_c = sum([x[0] for x in c_hits_total]) / sum(
             x[1] for x in c_hits_total
         )
-        total_accuracy_u = sum([x[0] for x in u_hits_total]) / sum(
+        except ZeroDivisionError:
+            total_accuracy_c = torch.Tensor([0.0])
+        try:
+            total_accuracy_u = sum([x[0] for x in u_hits_total]) / sum(
             x[1] for x in u_hits_total
         )
+        except ZeroDivisionError:
+            total_accuracy_u = torch.Tensor([0.0])
 
         return (
             (eval_loss / len(valid_dataloader)),
