@@ -3,11 +3,11 @@ import logging
 import logging.config
 import os
 import warnings
-
+import pandas as pd
 import numpy as np
 import torch
 import yaml
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 
 from utils import probe_utils
 
@@ -46,7 +46,7 @@ parser.add_argument(
     type=str,
     help="Language of the dataset. Only for AST-NN",
     choices=["java", "c"],
-    default="c",
+    default="java",
 )
 parser.add_argument(
     "--train_epochs",
@@ -63,22 +63,28 @@ parser.add_argument(
 parser.add_argument(
     "--patience",
     type=int,
-    default=5,
+    default=7,
     help="Patience for early stopping",
 )
 parser.add_argument(
     "--probe_rank",
     type=int,
-    default=128,
+    default=200,
     choices=[128, 512],
     help="Rank of the probe. 128 for AST-NN and FuncGNN, 512 for SumTF and CodeSumDRL",
 )
 parser.add_argument(
     "--probe_hidden_dim",
     type=int,
-    default=200,
+    default=512,
     choices=[200, 64, 512],
     help="Hidden dimension of the probe. 200 for AST-NN. 64 for FuncGnn, 512 for SumTF, 512 for CodeSumDRL",
+)
+parser.add_argument(
+    "--t",
+    type=int,
+    default=1,
+    choices=[1, 2, 3, 4],
 )
 args = parser.parse_args()
 #### Arguemnt Parser ####
@@ -102,9 +108,13 @@ if args.model == "ast_nn":
         "valid": os.path.join(args.dataset_path, args.language, "valid.jsonl"),
         "test": os.path.join(args.dataset_path, args.language, "test.jsonl"),
     }
-
-    train_set = load_dataset("json", data_files=data_files, split="train")
-    valid_set = load_dataset("json", data_files=data_files, split="valid")
+    
+    train_set = load_dataset(
+        "json", data_files=data_files, split="train[:47680]"
+    )  # 47680
+    valid_set = load_dataset(
+        "json", data_files=data_files, split="valid[:5952]"
+    )  # 5952
     test_set = load_dataset("json", data_files=data_files, split="test")
 
     train_set = train_set.map(
@@ -173,9 +183,9 @@ if args.model == "ast_nn":
 
     model_to_probe = BatchProgramCC(
         embedding_dim=EMBEDDING_DIM,
-        hidden_dim=100,
+        hidden_dim=256,
         vocab_size=MAX_TOKENS + 1,
-        encode_dim=128,
+        encode_dim=256,
         label_size=1,
         batch_size=32,
         use_gpu=False,
@@ -198,7 +208,7 @@ if args.model == "ast_nn":
                 "src",
                 args.model,
                 "models",
-                "astnn_C_1.pkl" if args.language == "c" else "astnn_JAVA_5.pkl",
+                "astnn_C_1_256.pkl" if args.language == "c" else "astnn_JAVA_5_256.pkl",
             )
         )
     )
