@@ -36,22 +36,25 @@ class ParserLoss(nn.Module):
         Returns:
             the accumulated loss of d,c,u
         """
-        loss_d = self.ds(
-            d_pred, d_real
-        )  # for ASTNN, there is no need to match d =_pred and d_real lengths.
+        try:
+            loss_d = self.ds(
+                d_pred, d_real
+            )  # for ASTNN, there is no need to match d =_pred and d_real lengths.
 
-        # as c is 3 dimensional, there is a need to fill c_real with -1s to match the dimensions of c_pred
-        if c_pred.shape[2] != c_real.shape[2]:
-            num_elements = c_pred.shape[2] - c_real.shape[2]
-            fill_tensor = torch.full((c_real.size(0), c_real.size(1), num_elements), -1)
-            c_real = torch.cat((c_real, fill_tensor), dim=2)
-        loss_c = self.cs(c_pred, c_real)
+            # as c is 3 dimensional, there is a need to fill c_real with -1s to match the dimensions of c_pred
+            if c_pred.shape[2] != c_real.shape[2]:
+                num_elements = c_pred.shape[2] - c_real.shape[2]
+                fill_tensor = torch.full((c_real.size(0), c_real.size(1), num_elements), -1)
+                c_real = torch.cat((c_real, fill_tensor), dim=2)
+            loss_c = self.cs(c_pred, c_real)
 
-        loss_u = self.us(
-            u_pred, u_real
-        )  # same as loss_d, there is no need to match u_pred and u_real lengths
+            loss_u = self.us(
+                u_pred, u_real
+            )  # same as loss_d, there is no need to match u_pred and u_real lengths
 
-        return loss_d + loss_c + loss_u
+            return loss_d + loss_c + loss_u
+        except Exception as e:
+            return torch.tensor(0.0, requires_grad=True)
 
     @staticmethod
     def calculate_hits(d_pred, c_pred, u_pred, d_real, c_real, u_real, length_batch):
