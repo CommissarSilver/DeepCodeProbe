@@ -2,12 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
-
-try:
-    from layers import *
-except ImportError:
-    from .layers import *
-import numpy as np
+from layers import *
 
 
 class AttentionDecoder(nn.Module):
@@ -66,23 +61,16 @@ class AttentionDecoder(nn.Module):
         enc_y: [seq_len, dim]
         states: ([dim,], [dim,])
         """
-        # Initialize attention_plot
-        attention_plot = np.zeros((max_length, y_enc.size(0)))
+        attention_plot = np.zeros((max_length, y_enc.shape[0]))
 
-        # Expand dimensions
-        h, c = states
-        y_enc = y_enc.unsqueeze(0)
-        dec_hidden = h.unsqueeze(0)
-        dec_cell = c.unsqueeze(0)
-
-        # Initialize dec_input and result list
-        dec_input = torch.tensor([start_token], dtype=torch.int32)
+        l_states = [(state[0].unsqueeze(0), state[1].unsqueeze(0)) for state in states]
+        dec_input = torch.full((1,), start_token, dtype=torch.int64)
         result = []
 
-        l_states = [(dec_hidden, dec_cell) for _ in range(self.layer)]
-
         for t in range(max_length):
-            predictions, l_states, attention_weights = self(dec_input, l_states, y_enc)
+            predictions, l_states, attention_weights = self(
+                dec_input, l_states, y_enc.unsqueeze(0)
+            )
 
             attention_weights = attention_weights.view(
                 -1,
@@ -102,9 +90,7 @@ class AttentionDecoder(nn.Module):
 
     def forward(self, x, l_states, enc_y):
         # hidden shape == (batch_size, hidden size)
-        if l_states[0][0].shape == (1, 512):
-            hidden_with_time_axis = l_states[-1][0].unsqueeze(1)
-        elif l_states[0][0].shape[0] == 1:
+        if l_states[0][0].shape[0] == 1:
             hidden_with_time_axis = l_states[-1][0].squeeze(0).unsqueeze(1)
         else:
             hidden_with_time_axis = l_states[-1][0].unsqueeze(1)
@@ -138,7 +124,7 @@ class AttentionDecoder(nn.Module):
                     hx = states[0]
                     cx = states[1]
                 x, (h, c) = self.layers[i](x, (hx, cx))
-                x += skip
+                x = x + skip
             else:
                 x = torch.cat([context_vector.unsqueeze(1), x], dim=-1)
                 hx = states[0].unsqueeze(1)
@@ -212,7 +198,9 @@ class CodennModel(BaseModel):
         )
         self.dropout = dropout
         self.E = SetEmbeddingLayer(dim_E, in_vocab)
-        print("I am CodeNNModel, dim is {} and {} layered".format(str(self.dim_rep), "0"))
+        print(
+            "I am CodeNNModel, dim is {} and {} layered".format(str(self.dim_rep), "0")
+        )
 
     def encode(self, sets):
         sets = self.E(sets)
