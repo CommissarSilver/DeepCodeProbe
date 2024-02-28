@@ -35,7 +35,7 @@ parser.add_argument(
     type=int,
     nargs="?",
     required=False,
-    default=512,
+    default=1024,
     help="Representation dimension",
 )
 parser.add_argument(
@@ -115,14 +115,19 @@ name = args.method + "_dim" + str(args.dim) + "_embed" + str(args.embed)
 name = name + "_drop" + str(args.drop)
 name = name + "_lr" + str(args.lr) + "_batch" + str(args.batch)
 name = (
-    name + "_epochs" + str(args.epochs) + "_layer" + str(args.layer) + "NEW_skip_size100"
+    name
+    + "_epochs"
+    + str(args.epochs)
+    + "_layer"
+    + str(args.layer)
+    + "NEW_skip_size100"
 )
 
 checkpoint_dir = "./models/" + name
 
 
 # load data
-dataset_path = "/Users/ahura/Nexus/Leto/src/summarization_tf/dataset"
+dataset_path = "/store/travail/vamaj/Leto/src/summarization_tf/dataset"
 trn_data = read_pickle(f"{dataset_path}/nl/train.pkl")
 vld_data = read_pickle(f"{dataset_path}/nl/valid.pkl")
 tst_data = read_pickle(f"{dataset_path}/nl/test.pkl")
@@ -201,14 +206,16 @@ for epoch in range(1, epochs + 1):
         model.optimizer.zero_grad()
         loss = model.train_on_batch(x, torch.tensor(y))
         loss_tmp.append(loss.item())
-        t.set_description("epoch:{:03d}, loss = {:.6f}".format(epoch, np.mean(loss_tmp)))
+        t.set_description(
+            "epoch:{:03d}, loss = {:.6f}".format(epoch, np.mean(loss_tmp))
+        )
         batch_turn += 1
         history["loss"].append(np.sum(loss_tmp) / len(t))
         writer.add_scalar("loss", np.sum(loss_tmp) / len(t), epoch)
         if batch_turn % 100 == 0:
             torch.save(
                 model.state_dict(),
-                f"/Users/ahura/Nexus/Leto/src/summarization_tf/checkpoints/epoch_{epoch}_batch_{batch_turn}.pth",
+                f"/store/travail/vamaj/Leto/src/summarization_tf/checkpoints/epoch_{epoch}_batch_{batch_turn}.pth",
             )
 
     # validate bleu
@@ -221,7 +228,9 @@ for epoch in range(1, epochs + 1):
         preds += res
         trues += [s[1:-1] for s in y_raw]
         bleus += [bleu4(tt, p) for tt, p in zip(trues, preds)]
-        t.set_description("epoch:{:03d}, bleu_val = {:.6f}".format(epoch, np.mean(bleus)))
+        t.set_description(
+            "epoch:{:03d}, bleu_val = {:.6f}".format(epoch, np.mean(bleus))
+        )
     history["bleu_val"].append(np.mean(bleus))
     writer.add_scalar("bleu_val", np.mean(bleus), epoch)
 
@@ -231,7 +240,9 @@ t = tqdm(vld_gen(0))
 for x, y, _, _ in t:
     loss = model.evaluate_on_batch(x, y)
     loss_tmp.append(loss.item())
-    t.set_description("epoch:{:03d}, loss_val = {:.6f}".format(epoch, np.mean(loss_tmp)))
+    t.set_description(
+        "epoch:{:03d}, loss_val = {:.6f}".format(epoch, np.mean(loss_tmp))
+    )
 history["loss_val"].append(np.sum(loss_tmp) / len(t))
 writer.add_scalar("loss_val", np.sum(loss_tmp) / len(t), epoch)
 
