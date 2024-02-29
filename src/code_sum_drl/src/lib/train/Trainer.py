@@ -14,7 +14,7 @@ import sys
 
 class Trainer(object):
     def __init__(self, model, train_data, eval_data, metrics, dicts, optim, opt):
-        self.model = model
+        self.model = model.to("cuda:0")  # can be set to gpu
         self.train_data = train_data
         self.eval_data = eval_data
         self.evaluator = lib.Evaluator(model, metrics, dicts, opt)
@@ -71,7 +71,7 @@ class Trainer(object):
             self.model.zero_grad()
             if self.opt.data_type == "code":
                 targets = batch[2]
-                attention_mask = batch[1][2][0].data.eq(lib.Constants.PAD).t()
+                attention_mask = batch[1][2][0].data.eq(lib.Constants.PAD).t() # this can go to gpu
             elif self.opt.data_type == "text":
                 targets = batch[2]
                 attention_mask = batch[0][0].data.eq(lib.Constants.PAD).t()

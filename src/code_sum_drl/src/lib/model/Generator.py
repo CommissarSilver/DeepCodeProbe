@@ -7,7 +7,7 @@ from torch.autograd import Variable
 class BaseGenerator(nn.Module):
     def __init__(self, generator, opt):
         super(BaseGenerator, self).__init__()
-        self.generator = generator
+        self.generator = generator.to("cuda:0")
         self.opt = opt
 
     def forward(self, inputs):
@@ -54,8 +54,8 @@ class MemEfficientGenerator(BaseGenerator):
         self, outputs, targets, weights, normalizer, criterion, regression=False
     ):
         outputs_split = torch.split(outputs, self.batch_size, self.dim)
-        targets_split = torch.split(targets, self.batch_size, self.dim)
-        weights_split = torch.split(weights, self.batch_size, self.dim)
+        targets_split = torch.split(targets.to("cuda:0"), self.batch_size, self.dim)
+        weights_split = torch.split(weights.to("cuda:0"), self.batch_size, self.dim)
 
         grad_output = []
         loss = 0

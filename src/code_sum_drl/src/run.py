@@ -16,17 +16,17 @@ if hostname == "ccnt-ubuntu":
         run = (
             "python preprocess.py "
             "-data_name github-python "
-            "-train_src /store/travail/vamaj/code_summarization_public/dataset/train/train0.60.20.2.code "
-            "-train_tgt /store/travail/vamaj/code_summarization_public/dataset/train/train0.60.20.2.comment "
-            "-train_xe_src /store/travail/vamaj/code_summarization_public/dataset/train/train0.60.20.2.code "
-            "-train_xe_tgt /store/travail/vamaj/code_summarization_public/dataset/train/train0.60.20.2.comment "
-            "-train_pg_src /store/travail/vamaj/code_summarization_public/dataset/train/train0.60.20.2.code "
-            "-train_pg_tgt /store/travail/vamaj/code_summarization_public/dataset/train/train0.60.20.2.comment "
-            "-valid_src /store/travail/vamaj/code_summarization_public/dataset/train/dev0.60.20.2.code "
-            "-valid_tgt /store/travail/vamaj/code_summarization_public/dataset/train/dev0.60.20.2.comment "
-            "-test_src /store/travail/vamaj/code_summarization_public/dataset/train/test0.60.20.2.code "
-            "-test_tgt /store/travail/vamaj/code_summarization_public/dataset/train/test0.60.20.2.comment "
-            "-save_data /store/travail/vamaj/code_summarization_public/dataset/train/processed_all "
+            "-train_src /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/train0.60.20.2.code "
+            "-train_tgt /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/train0.60.20.2.comment "
+            "-train_xe_src /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/train0.60.20.2.code "
+            "-train_xe_tgt /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/train0.60.20.2.comment "
+            "-train_pg_src /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/train0.60.20.2.code "
+            "-train_pg_tgt /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/train0.60.20.2.comment "
+            "-valid_src /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/dev0.60.20.2.code "
+            "-valid_tgt /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/dev0.60.20.2.comment "
+            "-test_src /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/test0.60.20.2.code "
+            "-test_tgt /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/test0.60.20.2.comment "
+            "-save_data /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/processed_all "
             "> /store/travail/vamaj/code_summarization_public/log.preprocess"
         )
         print(run)
@@ -42,23 +42,24 @@ if hostname == "ccnt-ubuntu":
     ):
         run = (
             "python a2c-train.py "
-            "-data /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/processed_all.train.pt "\
-            "-save_dir /store/travail/vamaj/Leto/src/code_sum_drl/dataset/result/ "\
-            "-embedding_w2v /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/ "\
-            "-start_reinforce %s "\
-            "-end_epoch %s "\
-            "-critic_pretrain_epochs %s "\
-            "-data_type %s "\
-            "-has_attn %s "\
-            "-gpus %s" \
+            "-data /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/processed_all.train.pt "
+            "-save_dir /store/travail/vamaj/Leto/src/code_sum_drl/dataset/result/ "
+            "-embedding_w2v /store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/ "
+            "-start_reinforce %s "
+            "-end_epoch %s "
+            "-critic_pretrain_epochs %s "
+            "-data_type %s "
+            "-has_attn %s "
+            "-gpus %s"
             % (
                 start_reinforce,
                 end_epoch,
                 critic_pretrain_epochs,
                 data_type,
                 has_attn,
-                gpus
-                ))
+                gpus,
+            )
+        )
         print(run)
         a = os.system(run)
         if a == 0:
@@ -66,7 +67,6 @@ if hostname == "ccnt-ubuntu":
         else:
             print("failed.")
             sys.exit()
-
 
     def test_a2c(data_type, has_attn, gpus):
         run = (
@@ -77,8 +77,7 @@ if hostname == "ccnt-ubuntu":
             "-eval -save_dir . "
             "-data_type %s "
             "-has_attn %s "
-            "-gpus %s "
-            % (data_type, has_attn, gpus)
+            "-gpus %s " % (data_type, has_attn, gpus)
         )
         print(run)
         a = os.system(run)

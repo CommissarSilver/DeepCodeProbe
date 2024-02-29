@@ -7,9 +7,9 @@ _INF = float('inf')
 class GlobalAttention(nn.Module):
     def __init__(self, dim):
         super(GlobalAttention, self).__init__()
-        self.linear_in = nn.Linear(dim, dim, bias=False)
+        self.linear_in = nn.Linear(dim, dim, bias=False).to("cuda:0")
         self.sm = nn.Softmax()
-        self.linear_out = nn.Linear(dim*2, dim, bias=False)
+        self.linear_out = nn.Linear(dim * 2, dim, bias=False).to("cuda:0")
         self.tanh = nn.Tanh()
         self.mask = None
 
@@ -25,7 +25,7 @@ class GlobalAttention(nn.Module):
         # Get attention
         attn = torch.bmm(context, targetT).squeeze(2)  # batch x sourceL
         if self.mask is not None:
-            attn.data.masked_fill_(self.mask, -_INF)
+            attn.data.masked_fill_(self.mask.to("cuda:0"), -_INF)
         attn = self.sm(attn)
         attn3 = attn.view(attn.size(0), 1, attn.size(1))  # batch x 1 x sourceL
 

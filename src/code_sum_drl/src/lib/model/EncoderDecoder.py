@@ -131,13 +131,14 @@ class BinaryTreeLeafModule(nn.Module):
         self.in_dim = in_dim
         self.mem_dim = mem_dim
 
-        self.cx = nn.Linear(self.in_dim, self.mem_dim)
-        self.ox = nn.Linear(self.in_dim, self.mem_dim)
+        self.cx = nn.Linear(self.in_dim, self.mem_dim).to("cuda:0")
+        self.ox = nn.Linear(self.in_dim, self.mem_dim).to("cuda:0")
         if self.cudaFlag:
             self.cx = self.cx.to("cuda")
             self.ox = self.ox.to("cuda")
 
     def forward(self, input):
+        input = input.to("cuda:0")
         c = self.cx(input)
         o = torch.sigmoid(self.ox(input))
         h = o * torch.tanh(c)
@@ -153,8 +154,8 @@ class BinaryTreeComposer(nn.Module):
         self.gate_output = gate_output
 
         def new_gate():
-            lh = nn.Linear(self.mem_dim, self.mem_dim)
-            rh = nn.Linear(self.mem_dim, self.mem_dim)
+            lh = nn.Linear(self.mem_dim, self.mem_dim).to("cuda:0")
+            rh = nn.Linear(self.mem_dim, self.mem_dim).to("cuda:0")
             return lh, rh
 
         self.ilh, self.irh = new_gate()
@@ -168,6 +169,10 @@ class BinaryTreeComposer(nn.Module):
             self.cuda_if_needed(gate_output_only=True)
 
     def forward(self, lc, lh, rc, rh):
+        lc = lc.to("cuda:0")
+        lh = lh.to("cuda:0")
+        rc = rc.to("cuda:0")
+        rh = rh.to("cuda:0")
         i = torch.sigmoid(self.ilh(lh) + self.irh(rh))
         lf = torch.sigmoid(self.lflh(lh) + self.lfrh(rh))
         rf = torch.sigmoid(self.rflh(lh) + self.rfrh(rh))
@@ -287,20 +292,24 @@ class TreeEncoder(nn.Module):
 
         self.word_lut = nn.Embedding(
             dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD
-        )
+        ).to("cuda:0")
         self.input_size = self.opt.word_vec_size
 
         self.cudaFlag = False
 
-        self.leaf_module = BinaryTreeLeafModule(False, self.input_size, self.hidden_size)
+        self.leaf_module = BinaryTreeLeafModule(
+            False, self.input_size, self.hidden_size
+        )
         self.composer = BinaryTreeComposer(False, self.input_size, self.hidden_size)
 
     def forward(self, tree, lengths):
         if not tree.children:
             node_idx = torch.LongTensor(
                 [self.dicts.lookup(tree.content, lib.Constants.UNK)]
-            ).to("cpu")
-            node = self.word_lut(Variable(node_idx))
+            ).to(
+                "cuda:0"
+            )  # can go to gpu
+            node = self.word_lut(Variable(node_idx).to("cuda:0"))
 
             output, state = self.leaf_module.forward(node)
 
@@ -319,7 +328,7 @@ class TreeEncoder(nn.Module):
                 output = output.unsqueeze(1)
                 supl = max_length - output.size(0)
                 if supl > 0:
-                    zeros = torch.zeros((supl, output.size(1), output.size(2))).to("cpu")
+                    zeros = torch.zeros((supl, output.size(1), output.size(2))).to('cuda:0')
                     output = torch.cat([output, zeros], 0)
 
                 h, c = state
@@ -361,7 +370,9 @@ class HybridEncoder(nn.Module):
         if not tree.children:
             node = self.word_lut(
                 Variable(
-                    torch.LongTensor([self.dicts.lookup(tree.content, lib.Constants.UNK)])
+                    torch.LongTensor(
+                        [self.dicts.lookup(tree.content, lib.Constants.UNK)]
+                    )
                 ).cuda()
             )
 
@@ -486,8 +497,10 @@ class TreeDecoder(nn.Module):
         super(TreeDecoder, self).__init__()
         self.word_lut = nn.Embedding(
             dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD
+        ).to("cuda:0")
+        self.rnn = StackedLSTM(opt.layers, input_size, opt.rnn_size, opt.dropout).to(
+            "cuda:0"
         )
-        self.rnn = StackedLSTM(opt.layers, input_size, opt.rnn_size, opt.dropout)
         if opt.has_attn:
             self.attn = lib.GlobalAttention(opt.rnn_size)
         self.dropout = nn.Dropout(opt.dropout)
@@ -496,7 +509,7 @@ class TreeDecoder(nn.Module):
 
     def step(self, emb, output, hidden, context):
         if self.input_feed:
-            emb = torch.cat([emb, output], 1)
+            emb = torch.cat([emb, output], 1).to("cuda:0")
         output, hidden = self.rnn(emb, hidden)
 
         if self.opt.has_attn:
@@ -506,7 +519,7 @@ class TreeDecoder(nn.Module):
 
     def forward(self, inputs, init_states):
         emb, output, hidden, context = init_states
-        embs = self.word_lut(inputs)
+        embs = self.word_lut(inputs.to("cuda:0"))
 
         outputs = []
         for i in range(inputs.size(0)):
@@ -514,7 +527,7 @@ class TreeDecoder(nn.Module):
             outputs.append(output)
             emb = embs[i]
 
-        outputs = torch.stack(outputs)
+        outputs = torch.stack(outputs).to("cuda:0")
         return outputs
 
 
@@ -602,7 +615,10 @@ class Hybrid2SeqModel(nn.Module):
             enc_hidden_tree1.append(enc_hidden_tree[1])
 
         enc_context_padded_tree = torch.cat(enc_context_padded_tree, 1)
-        enc_hidden_tree = (torch.cat(enc_hidden_tree0, 1), torch.cat(enc_hidden_tree1, 1))
+        enc_hidden_tree = (
+            torch.cat(enc_hidden_tree0, 1),
+            torch.cat(enc_hidden_tree1, 1),
+        )
 
         enc_hidden_txt, enc_context_txt = self.text_encoder(src_txt)
         init_output = self.make_init_decoder_output(enc_context_txt)
@@ -768,7 +784,7 @@ class Tree2SeqModel(nn.Module):
             )
         if self.opt.cuda:
             init_token = init_token.cuda()
-        emb = self.decoder.word_lut(init_token)
+        emb = self.decoder.word_lut(init_token.to("cuda:0"))
         return tgt, (emb, init_output, enc_hidden, enc_context_padded.transpose(0, 1))
 
     def forward(self, inputs, eval, regression=False):

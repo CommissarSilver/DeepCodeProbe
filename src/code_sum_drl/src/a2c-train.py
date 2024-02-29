@@ -19,7 +19,7 @@ import time
 def get_opt():
     parser = argparse.ArgumentParser(description="a2c-train.py")
     # Data options
-    working_path = "/Users/ahura/Nexus/Leto/src/code_sum_drl/dataset"
+    working_path = "/store/travail/vamaj/Leto/src/code_sum_drl/dataset"
     parser.add_argument(
         "-data",
         default=f"{working_path}/train/processed_all.train.pt",
@@ -245,7 +245,8 @@ def sort_test(dataset):
 def load_data(opt):
     dataset = torch.load(opt.data)
     dicts = dataset["dicts"]
-    # opt.cuda = False
+    opt.cuda = False
+    
     # filter test data.
     if opt.var_length:
         (
@@ -309,15 +310,15 @@ def create_optim(model):
 
 def create_model(model_class, dicts, gen_out_size):
     if opt.data_type == "code":
-        encoder = lib.TreeEncoder(opt, dicts["src"])
-        decoder = lib.TreeDecoder(opt, dicts["tgt"])
+        encoder = lib.TreeEncoder(opt, dicts["src"]).to("cuda:0")
+        decoder = lib.TreeDecoder(opt, dicts["tgt"]).to("cuda:0")
     elif opt.data_type == "text":
-        encoder = lib.Encoder(opt, dicts["src"])
-        decoder = lib.TreeDecoder(opt, dicts["tgt"])
+        encoder = lib.Encoder(opt, dicts["src"]).to("cuda:0")
+        decoder = lib.TreeDecoder(opt, dicts["tgt"]).to("cuda:0")
     elif opt.data_type == "hybrid":
-        code_encoder = lib.TreeEncoder(opt, dicts["src"])
-        text_encoder = lib.Encoder(opt, dicts["src"])
-        decoder = lib.HybridDecoder(opt, dicts["tgt"])
+        code_encoder = lib.TreeEncoder(opt, dicts["src"]).to("cuda:0")
+        text_encoder = lib.Encoder(opt, dicts["src"]).to("cuda:0")
+        decoder = lib.HybridDecoder(opt, dicts["tgt"]).to("cuda:0")
 
     # Use memory efficient generator when output size is large and
     # max_generator_batches is smaller than batch_size.
@@ -361,7 +362,8 @@ def main():
     np.random.seed(opt.seed)
     random.seed(opt.seed)
 
-    opt.cuda = len(opt.gpus)
+    opt.cuda = False
+    
 
     if opt.save_dir and not os.path.exists(opt.save_dir):
         os.makedirs(opt.save_dir)
