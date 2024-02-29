@@ -167,7 +167,9 @@ class BaseModel(nn.Module):
         self.optimizer.zero_grad()
 
         y_enc, (c, h) = self.encode(x)
-        loss = self.decoder.get_loss(y_enc, (c, h), y, dropout=self.dropout)
+        loss = self.decoder.get_loss(
+            y_enc, (c, h), y.to("cuda:0"), dropout=self.dropout
+        )
         loss.backward()
         self.optimizer.step()
         return loss
@@ -355,18 +357,25 @@ class MultiwayModel(BaseModel):
 
     def encode(self, x):
         tensor, indice, tree_num = x
-        tensor = self.E(tensor)
+        device = torch.device(
+            "cuda:0" if torch.cuda.is_available() else "cpu"
+        )  # Define the device
+        tensor = self.E(tensor)  # Send tensor to the device
         # tensor = [F.dropout(t, self.dropout) for t in tensor]
         for i, multiway_layer in enumerate(self.multiway_layers):
             skip = tensor
             tensor, c = multiway_layer(tensor, indice)
-            tensor = [t + s for t, s in zip(tensor, skip)]
+            tensor = [
+                t.to(device) + s for t, s in zip(tensor, skip)
+            ]  # Send each tensor in the list to the device
 
         hx = tensor[-1]
         cx = c[-1]
         ys = []
         batch_size = tensor[-1].shape[0]
-        tensor = torch.cat(tensor, 0)
+        tensor = torch.cat(tensor, 0).to(
+            device
+        )  # Send the concatenated tensor to the device
         # tree_num = torch.cat(tree_num, 0)
         tree_num_tensors = [torch.from_numpy(arr) for arr in tree_num]
         tree_num = torch.cat(tree_num_tensors, dim=0)

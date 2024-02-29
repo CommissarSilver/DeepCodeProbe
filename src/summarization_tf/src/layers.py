@@ -13,11 +13,11 @@ from utils import *
 class TreeEmbeddingLayer(nn.Module):
     def __init__(self, dim_E, in_vocab):
         super(TreeEmbeddingLayer, self).__init__()
-        self.E = nn.Parameter(torch.rand(in_vocab, dim_E))
+        self.E = nn.Parameter(torch.rand(in_vocab, dim_E)).to('cuda:0')
 
     def forward(self, x):
         x_len = [xx.shape[0] for xx in x]
-        x_tensor = [torch.from_numpy(xi) for xi in x]
+        x_tensor = [torch.from_numpy(xi).to("cuda:0") for xi in x]
         x_concat = torch.cat(x_tensor, dim=0)
         ex = torch.index_select(self.E, 0, x_concat)
         exs = torch.split(ex, x_len, dim=0)
@@ -337,6 +337,7 @@ class BiLSTM(nn.Module):
         c_init = self.c_init.expand(batch, -1).unsqueeze(0).repeat(2, 1, 1)
 
         # Packing input sequence
+        length = length.cpu()
         x_packed = nn.utils.rnn.pack_padded_sequence(x, length, batch_first=True, enforce_sorted=False)
         
         # Feedforward
@@ -362,15 +363,17 @@ class ShidoTreeLSTMLayer(nn.Module):
         self.U_u = BiLSTM(dim_out)
         self.U_o = BiLSTM(dim_out)
         self.W = nn.Linear(dim_in, dim_out * 4)
-        self.h_init = nn.Parameter(torch.zeros(1, dim_out))
-        self.c_init = nn.Parameter(torch.zeros(1, dim_out))
+        self.h_init = nn.Parameter(torch.zeros(1, dim_out)).to('cuda:0')
+        self.c_init = nn.Parameter(torch.zeros(1, dim_out)).to("cuda:0")
 
     def forward(self, tensor, indices):
         h_tensor = self.h_init
         c_tensor = self.c_init
         res_h, res_c = [], []
         for indice, x in zip(indices, tensor):
-            h_tensor, c_tensor = self.apply(x, h_tensor, c_tensor, indice)
+            h_tensor, c_tensor = self.apply(
+                x, h_tensor, c_tensor, indice.to("cuda:0")
+            )
             res_h.append(h_tensor[:, :])
             res_c.append(c_tensor[:, :])
             h_tensor = torch.cat([self.h_init, h_tensor], 0)
@@ -518,7 +521,6 @@ class TreeDropout(nn.Module):
         for e, v in enumerate(torch.split(dropped, len(ys))):
             nodes[e].h = v.squeeze()
         return roots
-
 
 
 class SetEmbeddingLayer(nn.Module):
