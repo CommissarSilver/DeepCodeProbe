@@ -213,7 +213,7 @@ for epoch in range(1, epochs + 1):
             batch_turn += 1
             history["loss"].append(np.sum(loss_tmp) / len(t))
             writer.add_scalar("loss", np.sum(loss_tmp) / len(t), epoch)
-            if batch_turn % 100 == 0:
+            if batch_turn % 1000 == 0:
                 torch.save(
                     model.state_dict(),
                     f"/store/travail/vamaj/Leto/src/summarization_tf/checkpoints/epoch_{epoch}_batch_{batch_turn}.pth",
@@ -221,7 +221,7 @@ for epoch in range(1, epochs + 1):
         except RuntimeError as e:
             print(e)
             pass
-
+    json.dump(history, open(f"{checkpoint_dir}/train_{epoch}.json", "w"))
     # # validate bleu
     # preds = []
     # trues = []
