@@ -78,7 +78,7 @@ parser.add_argument(
     type=int,
     nargs="?",
     required=False,
-    default=1,
+    default=10,
     help="Epoch number",
 )
 parser.add_argument(
@@ -213,7 +213,7 @@ for epoch in range(1, epochs + 1):
             batch_turn += 1
             history["loss"].append(np.sum(loss_tmp) / len(t))
             writer.add_scalar("loss", np.sum(loss_tmp) / len(t), epoch)
-            if batch_turn % 5000 == 0:
+            if batch_turn % 1899 == 0:
                 torch.save(
                     model.state_dict(),
                     f"/store/travail/vamaj/Leto/src/summarization_tf/checkpoints/epoch_{epoch}_batch_{batch_turn}.pth",
@@ -247,7 +247,10 @@ history["loss_val"].append(np.sum(loss_tmp) / len(t))
 writer.add_scalar("loss_val", np.sum(loss_tmp) / len(t), epoch)
 
 # checkpoint
-torch.save(model.state_dict(), f"checkpoints/epoch_{epoch}.pth")
+torch.save(
+    model.state_dict(),
+    f"/store/travail/vamaj/Leto/src/summarization_tf/checkpoints/epoch_{epoch}_{args.dim}.pth",
+)
 if history["bleu_val"][-1] == max(history["bleu_val"]):
     best_model_path = f"checkpoints/epoch_{epoch}.pth"
     print(f"Now best model is at {best_model_path}")
