@@ -63,7 +63,7 @@ class AttentionDecoder(nn.Module):
         """
         attention_plot = np.zeros((max_length, y_enc.shape[0]))
 
-        l_states = [(state[0].unsqueeze(0), state[1].unsqueeze(0)) for state in states]
+        l_states = [(states[0].unsqueeze(0), states[1].unsqueeze(0))]
         dec_input = torch.full((1,), start_token, dtype=torch.int64)
         result = []
 
@@ -93,7 +93,7 @@ class AttentionDecoder(nn.Module):
         if l_states[0][0].shape[0] == 1:
             hidden_with_time_axis = l_states[-1][0].squeeze(0).unsqueeze(1)
         else:
-            hidden_with_time_axis = l_states[-1][0].unsqueeze(1)
+            hidden_with_time_axis = l_states[-1][0].unsqueeze(1)    
 
         # score shape == (batch_size, max_length, hidden_size)
         i_s = self.W1(enc_y)
@@ -187,7 +187,7 @@ class BaseModel(nn.Module):
 
     def evaluate_on_batch(self, x, y):
         y_enc, (c, h) = self.encode(x)
-        loss = self.decoder.get_loss(y_enc, (c, h), y)
+        loss = self.decoder.get_loss(y_enc, (c, h), y.to("cuda:0"))
         return loss.item()
 
 
