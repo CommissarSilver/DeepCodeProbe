@@ -69,7 +69,7 @@ parser.add_argument(
     type=int,
     nargs="?",
     required=False,
-    default=16,
+    default=128,
     help="Mini batch size",
 )
 parser.add_argument(
@@ -78,7 +78,7 @@ parser.add_argument(
     type=int,
     nargs="?",
     required=False,
-    default=10,
+    default=1,
     help="Epoch number",
 )
 parser.add_argument(
@@ -213,7 +213,7 @@ for epoch in range(1, epochs + 1):
             batch_turn += 1
             history["loss"].append(np.sum(loss_tmp) / len(t))
             writer.add_scalar("loss", np.sum(loss_tmp) / len(t), epoch)
-            if batch_turn % 1000 == 0:
+            if batch_turn % 5000 == 0:
                 torch.save(
                     model.state_dict(),
                     f"/store/travail/vamaj/Leto/src/summarization_tf/checkpoints/epoch_{epoch}_batch_{batch_turn}.pth",
@@ -222,28 +222,24 @@ for epoch in range(1, epochs + 1):
             print(e)
             pass
     json.dump(history, open(f"{checkpoint_dir}/train_{epoch}.json", "w"))
-    # # validate bleu
+    # t = tqdm(vld_gen(0))
     # preds = []
     # trues = []
     # bleus = []
-    # t = tqdm(vld_gen(0))
     # for x, y, _, y_raw in t:
     #     res = model.translate(x, nl_i2w, nl_w2i)
     #     preds += res
     #     trues += [s[1:-1] for s in y_raw]
     #     bleus += [bleu4(tt, p) for tt, p in zip(trues, preds)]
-    #     t.set_description(
-    #         "epoch:{:03d}, bleu_val = {:.6f}".format(epoch, np.mean(bleus))
-    #     )
+    #     t.set_description("epoch:{:03d}, bleu_val = {:.6f}".format(epoch, np.mean(bleus)))
     # history["bleu_val"].append(np.mean(bleus))
     # writer.add_scalar("bleu_val", np.mean(bleus), epoch)
-
 # validate loss
 loss_tmp = []
 t = tqdm(vld_gen(0))
 for x, y, _, _ in t:
     loss = model.evaluate_on_batch(x, y)
-    loss_tmp.append(loss.item())
+    loss_tmp.append(loss)
     t.set_description(
         "epoch:{:03d}, loss_val = {:.6f}".format(epoch, np.mean(loss_tmp))
     )
