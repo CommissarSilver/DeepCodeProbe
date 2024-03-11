@@ -33,13 +33,13 @@ parser.add_argument(
     type=str,
     help="Model to probe",
     choices=["ast_nn", "funcgnn", "summarization_tf", "code_sum_drl", "cscg_dual"],
-    default="ast_nn",
+    default="summarization_tf",
 )
 parser.add_argument(
     "--dataset_path",
     type=str,
     help="Path to the dataset - Path follows the format /model_name/dataset",
-    default=os.path.join(os.getcwd(), "src", "ast_nn", "dataset"),
+    default=os.path.join(os.getcwd(), "src", "summarization_tf", "dataset"),
 )
 parser.add_argument(
     "--language",
@@ -69,7 +69,7 @@ parser.add_argument(
 parser.add_argument(
     "--probe_rank",
     type=int,
-    default=200,
+    default=1024,
     choices=[128, 512],
     help="Rank of the probe. 128 for AST-NN and FuncGNN, 512 for SumTF and CodeSumDRL",
 )
@@ -352,11 +352,11 @@ elif args.model == "summarization_tf":
         "valid": os.path.join(args.dataset_path, "valid.json"),
         "test": os.path.join(args.dataset_path, "test.json"),
     }
-
+    print('here')
     train_set = load_dataset("json", data_files=data_files, split="train")
     valid_set = load_dataset("json", data_files=data_files, split="valid")
     test_set = load_dataset("json", data_files=data_files, split="test")
-
+    print('here')
     train_set_processed = [
         code_to_index(i["code"], i["nl"], idx) for idx, i in enumerate(train_set)
     ]
@@ -366,7 +366,7 @@ elif args.model == "summarization_tf":
     test_set_processed = [
         code_to_index(i["code"], i["nl"], idx) for idx, i in enumerate(test_set)
     ]
-
+    print('here')
     train_set_processed = [i for i in train_set_processed if i is not None]
     test_set_processed = [i for i in test_set_processed if i is not None]
     valid_set_processed = [i for i in valid_set_processed if i is not None]
@@ -408,15 +408,15 @@ elif args.model == "summarization_tf":
     nl_w2i = read_pickle(f"{args.dataset_path}/nl_w2i.pkl")
 
     model = MultiwayModel(
-        512,
-        512,
-        512,
+        1024,
+        1024,
+        1024,
         len(code_w2i),
         len(nl_w2i),
         dropout=0.5,
         lr=0.001,
         layer=1,
-    )
+    ).to("cuda:0")
 
     model.load_state_dict(
         torch.load(
@@ -425,7 +425,7 @@ elif args.model == "summarization_tf":
                 "src",
                 args.model,
                 "models",
-                "model_state.pth",
+                "epoch_10_1024.pth",
             )
         )
     )
@@ -433,7 +433,7 @@ elif args.model == "summarization_tf":
     train_set = CustomDataset(train_set)
     test_set = CustomDataset(test_set)
     valid_set = CustomDataset(valid_set)
-
+    print('ere')
     probe_model = SumTFParserProbe(
         probe_rank=args.probe_rank,
         hidden_dim=args.probe_hidden_dim,

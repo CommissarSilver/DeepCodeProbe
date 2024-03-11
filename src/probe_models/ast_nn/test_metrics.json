@@ -1,9 +1,1 @@
-{
-    "test_loss": 19.213151393492527,
-    "D_accuracy": 0.1898,
-    "C_accuracy": 0.1898,
-    "U_accuracy": 0.1898,
-    "test_precision_D": null,
-    "test_recall": null,
-    "test_f1": null
-}
+{"test_loss": 8.811689652223638, "D_accuracy": 0.1424, "C_accuracy": 0.1424, "U_accuracy": 0.1424, "test_precision_D": null, "test_recall": null, "test_f1": null}
