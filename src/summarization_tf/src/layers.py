@@ -362,7 +362,7 @@ class ShidoTreeLSTMLayer(nn.Module):
         self.U_i = BiLSTM(dim_out)
         self.U_u = BiLSTM(dim_out)
         self.U_o = BiLSTM(dim_out)
-        self.W = nn.Linear(dim_in, dim_out * 4)
+        self.W = nn.Linear(dim_in, dim_out * 4).to("cuda:0")
         self.h_init = nn.Parameter(torch.zeros(1, dim_out)).to('cuda:0')
         self.c_init = nn.Parameter(torch.zeros(1, dim_out)).to("cuda:0")
 
@@ -388,7 +388,7 @@ class ShidoTreeLSTMLayer(nn.Module):
         h = h_tensor.index_select(0, indice.where(mask_bool, torch.zeros_like(indice)).flatten()).view(*indice.shape, -1)
         c = c_tensor.index_select(0, indice.where(mask_bool, torch.zeros_like(indice)).flatten()).view(*indice.shape, -1)
 
-        W_x = self.W(x)  # [nodes, dim_out * 4]
+        W_x = self.W(x.to("cuda:0"))  # [nodes, dim_out * 4]
         W_f_x = W_x[:, :self.dim_out * 1]  # [nodes, dim_out]
         W_i_x = W_x[:, self.dim_out * 1:self.dim_out * 2]
         W_u_x = W_x[:, self.dim_out * 2:self.dim_out * 3]
