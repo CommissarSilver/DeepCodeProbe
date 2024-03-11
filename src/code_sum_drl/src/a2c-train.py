@@ -27,7 +27,7 @@ def get_opt():
     )
     parser.add_argument(
         "-save_dir",
-        default=f"{working_path}/result/",
+        default=f"{working_path}/result/bigger",
         help="Directory to save models",
     )
     parser.add_argument("-load_from", help="Path to load a pretrained model.")
@@ -46,7 +46,7 @@ def get_opt():
         help="Number of layers in the LSTM encoder/decoder",
     )
     parser.add_argument(
-        "-rnn_size", type=int, default=512, help="Size of LSTM hidden states"
+        "-rnn_size", type=int, default=1024, help="Size of LSTM hidden states"
     )
     parser.add_argument(
         "-word_vec_size", type=int, default=512, help="Word embedding sizes"
@@ -58,7 +58,9 @@ def get_opt():
         help="""Feed the context vector at each time step as
                         additional input (via concatenation with the word embeddings) to the decoder.""",
     )
-    parser.add_argument("-brnn", action="store_true", help="Use a bidirectional encoder")
+    parser.add_argument(
+        "-brnn", action="store_true", help="Use a bidirectional encoder"
+    )
     parser.add_argument(
         "-brnn_merge",
         default="concat",
@@ -69,7 +71,7 @@ def get_opt():
     # Optimization options
     parser.add_argument(
         "-data_type",
-        default="code",
+        default="hybrid",
         help="Type of encoder to use. Options are [text|code].",
     )
     parser.add_argument("-batch_size", type=int, default=64, help="Maximum batch size")
@@ -81,7 +83,7 @@ def get_opt():
     )
 
     parser.add_argument(
-        "-end_epoch", type=int, default=50, help="Epoch to stop training."
+        "-end_epoch", type=int, default=30, help="Epoch to stop training."
     )
     parser.add_argument(
         "-start_epoch", type=int, default=1, help="Epoch to start training."
@@ -94,7 +96,9 @@ def get_opt():
         help="""Parameters are initialized over uniform distribution with support (-param_init, param_init). Use 0 to not use initialization""",
     )
     parser.add_argument(
-        "-optim", default="adam", help="Optimization method. [sgd|adagrad|adadelta|adam]"
+        "-optim",
+        default="adam",
+        help="Optimization method. [sgd|adagrad|adadelta|adam]",
     )
     parser.add_argument("-lr", type=float, default=1e-3, help="Initial learning rate")
     parser.add_argument(
@@ -142,13 +146,13 @@ def get_opt():
     parser.add_argument(
         "-start_reinforce",
         type=int,
-        default=None,
+        default=10,
         help="""Epoch to start reinforcement training. Use -1 to start immediately.""",
     )
     parser.add_argument(
         "-critic_pretrain_epochs",
         type=int,
-        default=0,
+        default=10,
         help="Number of epochs to pretrain critic (actor fixed).",
     )
     parser.add_argument(
@@ -167,7 +171,10 @@ def get_opt():
         "-eval_sample", action="store_true", default=False, help="Eval by sampling"
     )
     parser.add_argument(
-        "-max_predict_length", type=int, default=50, help="Maximum length of predictions."
+        "-max_predict_length",
+        type=int,
+        default=50,
+        help="Maximum length of predictions.",
     )
 
     # Reward shaping
@@ -246,7 +253,7 @@ def load_data(opt):
     dataset = torch.load(opt.data)
     dicts = dataset["dicts"]
     opt.cuda = False
-    
+
     # filter test data.
     if opt.var_length:
         (
@@ -323,7 +330,9 @@ def create_model(model_class, dicts, gen_out_size):
     # Use memory efficient generator when output size is large and
     # max_generator_batches is smaller than batch_size.
     if opt.max_generator_batches < opt.batch_size and gen_out_size > 1:
-        generator = lib.MemEfficientGenerator(nn.Linear(opt.rnn_size, gen_out_size), opt)
+        generator = lib.MemEfficientGenerator(
+            nn.Linear(opt.rnn_size, gen_out_size), opt
+        )
     else:
         generator = lib.BaseGenerator(nn.Linear(opt.rnn_size, gen_out_size), opt)
     if opt.data_type == "code" or opt.data_type == "text":
@@ -363,13 +372,14 @@ def main():
     random.seed(opt.seed)
 
     opt.cuda = False
-    
 
     if opt.save_dir and not os.path.exists(opt.save_dir):
         os.makedirs(opt.save_dir)
 
     if torch.cuda.is_available() and not opt.cuda:
-        print("WARNING: You have a CUDA device, so you should probably run with -gpus 1")
+        print(
+            "WARNING: You have a CUDA device, so you should probably run with -gpus 1"
+        )
 
     if opt.cuda:
         cuda.device(0)
@@ -395,7 +405,9 @@ def main():
         print("optim: ", optim)
     else:
         print("Loading from checkpoint at %s" % opt.load_from)
-        checkpoint = torch.load(opt.load_from, map_location=lambda storage, loc: storage)
+        checkpoint = torch.load(
+            opt.load_from, map_location=lambda storage, loc: storage
+        )
         model = checkpoint["model"]
         optim = create_optim(model)
         opt.start_epoch = checkpoint["epoch"] + 1

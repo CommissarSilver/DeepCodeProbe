@@ -9,7 +9,7 @@ if hostname == "ccnt-ubuntu":
     print(hostname)
 
     def preprocess():
-        log = "/Users/ahura/Nexus/code_summarization_public/log.preprocess"
+        log = "/store/travail/vamaj/Leto/src/code_sum_drl/log.preprocess"
         if os.path.exists(log):
             os.system("rm -rf %s" % log)
 

@@ -8,9 +8,9 @@ _INF = float("inf")
 class HybridAttention(nn.Module):
     def __init__(self, dim):
         super(HybridAttention, self).__init__()
-        self.linear_in = nn.Linear(dim, dim, bias=False)
+        self.linear_in = nn.Linear(dim, dim, bias=False).to("cuda:0")
         self.sm = nn.Softmax(dim=-1)
-        self.linear_out = nn.Linear(dim * 4, dim, bias=False)
+        self.linear_out = nn.Linear(dim * 4, dim, bias=False).to("cuda:0")
         self.tanh = nn.Tanh()
         self.mask_tree = None
         self.mask_txt = None
@@ -31,9 +31,9 @@ class HybridAttention(nn.Module):
         attn_txt = torch.bmm(context_txt, targetT_txt).squeeze(2)  # batch x sourceL
 
         if self.mask_tree is not None and self.mask_txt is not None:
-            attn_tree.data.masked_fill_(self.mask_tree, -_INF)
+            attn_tree.data.masked_fill_(self.mask_tree.to("cuda:0"), -_INF)
             attn_tree = self.sm(attn_tree)
-            attn_txt.data.masked_fill_(self.mask_txt, -_INF)
+            attn_txt.data.masked_fill_(self.mask_txt.to("cuda:0"), -_INF)
             attn_txt = self.sm(attn_txt)
 
         attn3_tree = attn_tree.view(

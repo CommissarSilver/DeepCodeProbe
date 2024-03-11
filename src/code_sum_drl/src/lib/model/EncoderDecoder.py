@@ -76,7 +76,7 @@ class Encoder(nn.Module):
 
         self.word_lut = nn.Embedding(
             dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD
-        )
+        ).to("cuda:0")
 
         self.rnn = nn.LSTM(
             opt.word_vec_size,
@@ -84,12 +84,16 @@ class Encoder(nn.Module):
             num_layers=opt.layers,
             dropout=opt.dropout,
             bidirectional=opt.brnn,
-        )
+        ).to("cuda:0")
         self.dicts = dicts
         self.opt = opt
 
     def forward(self, inputs, hidden=None):
-        emb = pack(self.word_lut(inputs[0]), inputs[1], enforce_sorted=False)
+        emb = pack(
+            self.word_lut(inputs[0].to("cuda:0")),
+            inputs[1],
+            enforce_sorted=False,
+        )
 
         outputs, hidden_t = self.rnn(emb, hidden)
         outputs, _ = unpack(outputs)
@@ -328,7 +332,9 @@ class TreeEncoder(nn.Module):
                 output = output.unsqueeze(1)
                 supl = max_length - output.size(0)
                 if supl > 0:
-                    zeros = torch.zeros((supl, output.size(1), output.size(2))).to('cuda:0')
+                    zeros = torch.zeros((supl, output.size(1), output.size(2))).to(
+                        "cuda:0"
+                    )
                     output = torch.cat([output, zeros], 0)
 
                 h, c = state
@@ -542,7 +548,7 @@ class HybridDecoder(nn.Module):
         super(HybridDecoder, self).__init__()
         self.word_lut = nn.Embedding(
             dicts.size(), opt.word_vec_size, padding_idx=lib.Constants.PAD
-        )
+        ).to("cuda:0")
         self.rnn = StackedLSTM(opt.layers, input_size, opt.rnn_size, opt.dropout)
         if opt.has_attn:
             # self.text_attn = lib.GlobalAttention(opt.rnn_size)
@@ -572,7 +578,7 @@ class HybridDecoder(nn.Module):
 
     def forward(self, inputs, init_states):
         emb, output, hidden_tree, context_tree, hidden_txt, context_txt = init_states
-        embs = self.word_lut(inputs)
+        embs = self.word_lut(inputs.to("cuda:0"))
         outputs = []
         for i in range(inputs.size(0)):
             output, hidden_tree, hidden_txt = self.step(
@@ -600,7 +606,7 @@ class Hybrid2SeqModel(nn.Module):
         return Variable(context.data.new(*h_size).zero_(), requires_grad=False)
 
     def initialize(self, inputs, eval):
-        tgt = inputs[2]
+        tgt = inputs[2].to("cuda:0")
         trees = inputs[1][0]
         lengths = inputs[1][1]
         src_txt = inputs[0]
@@ -628,7 +634,7 @@ class Hybrid2SeqModel(nn.Module):
         )
         if self.opt.cuda:
             init_token = init_token.cuda()
-        emb = self.decoder.word_lut(init_token)
+        emb = self.decoder.word_lut(init_token.to("cuda:0"))
 
         return tgt, (
             emb,
@@ -652,7 +658,12 @@ class Hybrid2SeqModel(nn.Module):
         self, outputs, targets, weights, normalizer, criterion, regression=False
     ):
         grad_output, loss = self.generator.backward(
-            outputs, targets, weights, normalizer, criterion, regression
+            outputs,
+            targets.to("cuda:0"),
+            weights.to("cuda:0"),
+            normalizer.to("cuda:0") if isinstance(normalizer, torch.Tensor) else normalizer,
+            criterion,
+            regression,
         )
         outputs.backward(grad_output)
         return loss
@@ -662,6 +673,7 @@ class Hybrid2SeqModel(nn.Module):
 
     def translate(self, inputs, max_length):
         targets, init_states = self.initialize(inputs, eval=True)
+        targets=targets.to("cuda:0")
         # emb, output, hidden, context = init_states
         emb, output, hidden_tree, context_tree, hidden_txt, context_txt = init_states
 

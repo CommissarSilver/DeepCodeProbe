@@ -130,15 +130,21 @@ class ReinforceTrainer(object):
         for i in range(len(self.train_data)):  #
             batch = self.train_data[i]  # batch_order[i]
             if self.opt.data_type == "code":
-                targets = batch[2]
-                attention_mask = batch[1][2][0].data.eq(lib.Constants.PAD).t()
+                targets = batch[2].to("cuda:0")
+                attention_mask = (
+                    batch[1][2][0].data.eq(lib.Constants.PAD).t().to("cuda:0")
+                )
             elif self.opt.data_type == "text":
-                targets = batch[2]
+                targets = batch[2].to("cuda:0")
                 attention_mask = batch[0][0].data.eq(lib.Constants.PAD).t()
             elif self.opt.data_type == "hybrid":
-                targets = batch[2]
-                attention_mask_code = batch[1][2][0].data.eq(lib.Constants.PAD).t()
-                attention_mask_txt = batch[0][0].data.eq(lib.Constants.PAD).t()
+                targets = batch[2].to("cuda:0")
+                attention_mask_code = (
+                    batch[1][2][0].data.eq(lib.Constants.PAD).t().to("cuda:0")
+                )
+                attention_mask_txt = (
+                    batch[0][0].data.eq(lib.Constants.PAD).t().to("cuda:0")
+                )
 
             batch_size = targets.size(1)
 
@@ -165,16 +171,16 @@ class ReinforceTrainer(object):
             if self.pert_func is not None:
                 rewards = self.pert_func(rewards)
 
-            samples = Variable(torch.LongTensor(samples).t().contiguous())
+            samples = Variable(torch.LongTensor(samples).t().contiguous()).to("cuda:0")
             rewards = Variable(
                 torch.FloatTensor([rewards] * samples.size(0)).contiguous()
-            )
+            ).to("cuda:0")
             if self.opt.cuda:
                 samples = samples.cuda()
                 rewards = rewards.cuda()
 
             # Update critic.
-            critic_weights = samples.ne(lib.Constants.PAD).float()
+            critic_weights = samples.ne(lib.Constants.PAD).float().to("cuda:0")
             num_words = critic_weights.data.sum()
             if not no_update:
                 if self.opt.data_type == "code":

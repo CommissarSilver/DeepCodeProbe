@@ -71,8 +71,8 @@ class MemEfficientGenerator(BaseGenerator):
 
     def predict(self, outputs, targets, weights, criterion):
         outputs_split = torch.split(outputs, self.batch_size, self.dim)
-        targets_split = torch.split(targets, self.batch_size, self.dim)
-        weights_split = torch.split(weights, self.batch_size, self.dim)
+        targets_split = torch.split(targets.to("cuda:0"), self.batch_size, self.dim)
+        weights_split = torch.split(weights.to("cuda:0"), self.batch_size, self.dim)
 
         preds = []
         loss = 0

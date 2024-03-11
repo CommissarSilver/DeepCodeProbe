@@ -9,7 +9,7 @@ import sys
 
 class Evaluator(object):
     def __init__(self, model, metrics, dicts, opt):
-        self.model = model
+        self.model = model.to("cuda:0")
         self.loss_func = metrics["xent_loss"]
         self.sent_reward_func = metrics["sent_reward"]
         self.corpus_reward_func = metrics["corp_reward"]

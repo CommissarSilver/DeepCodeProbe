@@ -31,6 +31,9 @@ class Trainer(object):
         for epoch in range(start_epoch, end_epoch + 1):
             print("* XENT epoch *")
             print("Model optim lr: %g" % self.optim.lr)
+            # valid_loss, valid_sent_reward, valid_corpus_reward = self.evaluator.eval(
+            #     self.eval_data
+            # )
             train_loss = self.train_epoch(epoch)
             print("Train perplexity: %.2f" % math.exp(min(train_loss, 100)))
 
@@ -54,7 +57,8 @@ class Trainer(object):
             # model_name = os.path.join(self.opt.save_dir, "model_%d.pt" % epoch)
             model_name = os.path.join(
                 self.opt.save_dir,
-                "model_xent_%s_%s_%s.pt" % (self.opt.data_type, self.opt.has_attn, epoch),
+                "model_xent_%s_%s_%s.pt"
+                % (self.opt.data_type, self.opt.has_attn, epoch),
             )
 
             torch.save(checkpoint, model_name)
@@ -71,7 +75,9 @@ class Trainer(object):
             self.model.zero_grad()
             if self.opt.data_type == "code":
                 targets = batch[2]
-                attention_mask = batch[1][2][0].data.eq(lib.Constants.PAD).t() # this can go to gpu
+                attention_mask = (
+                    batch[1][2][0].data.eq(lib.Constants.PAD).t()
+                )  # this can go to gpu
             elif self.opt.data_type == "text":
                 targets = batch[2]
                 attention_mask = batch[0][0].data.eq(lib.Constants.PAD).t()
@@ -114,7 +120,9 @@ class Trainer(object):
                         math.exp(report_loss / report_words),
                         report_words / (time.time() - last_time),
                         str(
-                            datetime.timedelta(seconds=int(time.time() - self.start_time))
+                            datetime.timedelta(
+                                seconds=int(time.time() - self.start_time)
+                            )
                         ),
                     )
                 )
