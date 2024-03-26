@@ -143,19 +143,19 @@ def train_probe(
         )
         scheduler.step(eval_loss)
 
-        logger.info(
-            f"[epoch {epoch}] train loss: {round(training_loss, 4)}, validation loss: {round(eval_loss, 4)}"
-        )
-        logger.info(
-            f"[epoch {epoch}] D accuracy: {round(acc_d, 4)}, C accuracy: {round(acc_c, 6)}, U accuracy: {round(acc_u, 4)}"
-        )
+        # logger.info(
+        #     f"[epoch {epoch}] train loss: {round(training_loss, 4)}, validation loss: {round(eval_loss.item(), 4)}"
+        # )
+        # logger.info(
+        #     f"[epoch {epoch}] D accuracy: {round(acc_d.item(), 4)}, C accuracy: {round(acc_c.item(), 6)}, U accuracy: {round(acc_u.item(), 4)}"
+        # )
 
         metrics["training_loss"].append(training_loss)
         metrics["validation_loss"].append(eval_loss)
 
-        metrics["D_accuracy"].append(round(acc_d, 4))
-        metrics["C_accuracy"].append(round(acc_c, 4))
-        metrics["U_accuracy"].append(round(acc_u, 4))
+        
+        metrics["C_accuracy"].append(round(acc_c.item(), 4))
+        metrics["U_accuracy"].append(round(acc_u.item(), 4))
 
         if eval_loss < best_eval_loss:
             logger.info("Saving model checkpoint")
