@@ -40,13 +40,13 @@ parser.add_argument(
     type=str,
     help="Model to probe",
     choices=["ast_nn", "funcgnn", "summarization_tf", "code_sum_drl", "cscg_dual"],
-    default="code_sum_drl",
+    default="ast_nn",
 )
 parser.add_argument(
     "--dataset_path",
     type=str,
     help="Path to the dataset - Path follows the format /model_name/dataset",
-    default=os.path.join(os.getcwd(), "src", "summarization_tf", "dataset"),
+    default=os.path.join(os.getcwd(), "src", "ast_nn", "dataset"),
 )
 parser.add_argument(
     "--language",
@@ -357,8 +357,8 @@ if args.model == "ast_nn":
         merged_data.drop(["id_x", "id_y"], axis=1, inplace=True)
         merged_data.dropna(inplace=True)
         merged_data.reset_index(drop=True, inplace=True)
-        merged_data_similar = merged_data[merged_data["label"] == 1]
-        merged_data_dissimilar = merged_data[merged_data["label"] != 1]
+        merged_data_similar = merged_data[merged_data["label"] == 3]
+        merged_data_dissimilar = merged_data[merged_data["label"] == 5]
 
         (
             embeddings_trained_all,
@@ -475,11 +475,11 @@ if args.model == "ast_nn":
     get_initial_data()
     # get emebdding similarity for the similar and dissimilar pairs
     cosine_sim_similar_trained = compare_embeddings(
-        model="untrained",
+        model="trained",
         mode="similar",
     )
     consine_sim_dissimilar_trained = compare_embeddings(
-        model="untrained",
+        model="trained",
         mode="dissimilar",
     )
 
@@ -1056,8 +1056,8 @@ elif args.model == "summarization_tf":
         merged_data.dropna(inplace=True)
         merged_data.reset_index(drop=True, inplace=True)
 
-        merged_data_similar = merged_data[merged_data["label"] == 1]
-        merged_data_dissimilar = merged_data[merged_data["label"] != 1]
+        merged_data_similar = merged_data[merged_data["label"] == 3]
+        merged_data_dissimilar = merged_data[merged_data["label"] == 5]
 
         return merged_data_similar, merged_data_dissimilar
 
@@ -1113,7 +1113,7 @@ elif args.model == "summarization_tf":
                 os.getcwd(),
                 "src",
                 "summarization_tf",
-                "dataset_original",
+                "dataset",
                 "code_w2i.pkl",
             )
         )
@@ -1122,7 +1122,7 @@ elif args.model == "summarization_tf":
                 os.getcwd(),
                 "src",
                 "summarization_tf",
-                "dataset_original",
+                "dataset",
                 "nl_w2i.pkl",
             )
         )
