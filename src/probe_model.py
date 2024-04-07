@@ -33,13 +33,13 @@ parser.add_argument(
     type=str,
     help="Model to probe",
     choices=["ast_nn", "funcgnn", "summarization_tf", "code_sum_drl", "cscg_dual"],
-    default="summarization_tf",
+    default="code_sum_drl",
 )
 parser.add_argument(
     "--dataset_path",
     type=str,
     help="Path to the dataset - Path follows the format /model_name/dataset",
-    default=os.path.join(os.getcwd(), "src", "summarization_tf", "dataset"),
+    default=os.path.join(os.getcwd(), "src", "code_sum_drl", "dataset"),
 )
 parser.add_argument(
     "--language",
@@ -69,8 +69,8 @@ parser.add_argument(
 parser.add_argument(
     "--probe_rank",
     type=int,
-    default=1024,
-    choices=[128, 512],
+    default=2048,
+    choices=[128, 1024],
     help="Rank of the probe. 128 for AST-NN and FuncGNN, 512 for SumTF and CodeSumDRL",
 )
 parser.add_argument(
@@ -79,7 +79,7 @@ parser.add_argument(
     default=512,
     choices=[200, 64, 512],
     help="Hidden dimension of the probe. 200 for AST-NN. 64 for FuncGnn, 512 for SumTF, 512 for CodeSumDRL",
-)
+)  # for astnn probe rank is twice the size of hidden dim. so if the hidden dim is 256, probe rank is 512
 parser.add_argument(
     "--t",
     type=int,
@@ -108,13 +108,13 @@ if args.model == "ast_nn":
         "valid": os.path.join(args.dataset_path, args.language, "valid.jsonl"),
         "test": os.path.join(args.dataset_path, args.language, "test.jsonl"),
     }
-    
+
     train_set = load_dataset(
         "json", data_files=data_files, split="train[:47680]"
-    )  # 47680
+    )  # 47680 J , 47072 C
     valid_set = load_dataset(
         "json", data_files=data_files, split="valid[:5952]"
-    )  # 5952
+    )  # 5952 J, 5184 C
     test_set = load_dataset("json", data_files=data_files, split="test")
 
     train_set = train_set.map(
@@ -208,7 +208,7 @@ if args.model == "ast_nn":
                 "src",
                 args.model,
                 "models",
-                "astnn_C_1_256.pkl" if args.language == "c" else "astnn_JAVA_5_256.pkl",
+                "astnn_C_1_256.pkl" if args.language == "c" else "astnn_JAVA_4_256.pkl",
             )
         )
     )
@@ -352,11 +352,11 @@ elif args.model == "summarization_tf":
         "valid": os.path.join(args.dataset_path, "valid.json"),
         "test": os.path.join(args.dataset_path, "test.json"),
     }
-    print('here')
+    print("here")
     train_set = load_dataset("json", data_files=data_files, split="train")
     valid_set = load_dataset("json", data_files=data_files, split="valid")
     test_set = load_dataset("json", data_files=data_files, split="test")
-    print('here')
+    print("here")
     train_set_processed = [
         code_to_index(i["code"], i["nl"], idx) for idx, i in enumerate(train_set)
     ]
@@ -366,7 +366,7 @@ elif args.model == "summarization_tf":
     test_set_processed = [
         code_to_index(i["code"], i["nl"], idx) for idx, i in enumerate(test_set)
     ]
-    print('here')
+    print("here")
     train_set_processed = [i for i in train_set_processed if i is not None]
     test_set_processed = [i for i in test_set_processed if i is not None]
     valid_set_processed = [i for i in valid_set_processed if i is not None]
@@ -433,7 +433,7 @@ elif args.model == "summarization_tf":
     train_set = CustomDataset(train_set)
     test_set = CustomDataset(test_set)
     valid_set = CustomDataset(valid_set)
-    print('ere')
+    print("ere")
     probe_model = SumTFParserProbe(
         probe_rank=args.probe_rank,
         hidden_dim=args.probe_hidden_dim,
@@ -466,7 +466,7 @@ elif args.model == "code_sum_drl":
     from code_sum_drl.src.code_to_repr import Dataset as CodeSumDataset
     from code_sum_drl.src.code_to_repr import code_to_index
 
-    sys.path.append("/Users/ahura/Nexus/Leto/src/code_sum_drl/src")
+    sys.path.append(os.path.join(os.getcwd(),"src/code_sum_drl/src"))
     import lib
     from lib.data.Tree import *
 
@@ -478,7 +478,7 @@ elif args.model == "code_sum_drl":
 
     opt = argparse.ArgumentParser()
     opt.add_argument(
-        "-rnn_size", type=int, default=512, help="Size of LSTM hidden states,"
+        "-rnn_size", type=int, default=1024, help="Size of LSTM hidden states,"
     )
     opt.add_argument(
         "-word_vec_size",
@@ -533,7 +533,7 @@ elif args.model == "code_sum_drl":
     opt = opt.parse_args()
 
     dataset = torch.load(
-        "/Users/ahura/Nexus/Leto/src/code_sum_drl/dataset/train/processed_all_new.train.pt"
+        "/store/travail/vamaj/Leto/src/code_sum_drl/dataset/train/processed_all_new.train.pt"
     )
 
     def get_data_trees(trees):
@@ -622,9 +622,9 @@ elif args.model == "code_sum_drl":
             "src",
             args.model,
             "models",
-            "model_state.pt",
+            "model_state_2048.pt",
         ),
-        map_location=torch.device("cpu"),
+        map_location=torch.device("cuda:0"),
     )
     model = checkpoint["model"]
     model.opt.cuda = False

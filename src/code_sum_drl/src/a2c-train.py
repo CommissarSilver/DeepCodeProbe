@@ -46,7 +46,7 @@ def get_opt():
         help="Number of layers in the LSTM encoder/decoder",
     )
     parser.add_argument(
-        "-rnn_size", type=int, default=1024, help="Size of LSTM hidden states"
+        "-rnn_size", type=int, default=2048, help="Size of LSTM hidden states"
     )
     parser.add_argument(
         "-word_vec_size", type=int, default=512, help="Word embedding sizes"

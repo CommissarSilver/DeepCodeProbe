@@ -52,8 +52,8 @@ if __name__ == "__main__":
     embeddings = np.zeros((MAX_TOKENS + 1, EMBEDDING_DIM), dtype="float32")
     embeddings[: word2vec.vectors.shape[0]] = word2vec.vectors
 
-    HIDDEN_DIM = 256
-    ENCODE_DIM = 256
+    HIDDEN_DIM = 512
+    ENCODE_DIM = 512
     LABELS = 1
     EPOCHS = 7
     BATCH_SIZE = 32

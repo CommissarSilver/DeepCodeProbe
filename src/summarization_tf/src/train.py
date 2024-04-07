@@ -35,7 +35,7 @@ parser.add_argument(
     type=int,
     nargs="?",
     required=False,
-    default=1024,
+    default=2048,
     help="Representation dimension",
 )
 parser.add_argument(

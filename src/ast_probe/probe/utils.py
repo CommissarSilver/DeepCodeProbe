@@ -50,10 +50,10 @@ def get_embeddings_funcgnn(all_inputs, model, **kwargs):
 
             padded_tensor[padded_tensor == 0] = -1
             embs = padded_tensor
-        
+
         elif embs[0].size(0) == 64:
             embs = torch.stack(embs)
-            embs=embs.squeeze(-1)
+            embs = embs.squeeze(-1)
 
     return embs
 
@@ -81,6 +81,9 @@ def get_embeddings_sum_tf(all_inputs, model, **kwargs):
 
 def get_embeddings_code_sum_drl(all_inputs, model, **kwargs):
     with torch.no_grad():
+        all_inputs[0][0].to("cuda")
+        all_inputs[1][2][0].to("cuda")
+        all_inputs[2].to("cuda")
         embs = model.initialize(all_inputs, False)[1][3]
 
     # zero_padding = torch.zeros((embs.shape[0], 141 - embs.shape[1], embs.shape[2]))
