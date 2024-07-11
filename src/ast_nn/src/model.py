@@ -180,6 +180,7 @@ class BatchProgramCC(nn.Module):
                 self.vocab.key_to_index[token]
                 if token in self.vocab
                 else self.max_token
+
             ]
             children = node.children
 
@@ -200,9 +201,11 @@ class BatchProgramCC(nn.Module):
         try:
             code_trees = [trans2seq(code_ast) for code_ast in code_asts]
             x = [
+
                 self.vocab.key_to_index[token]
                 if token in self.vocab
                 else self.max_token
+
                 for token in input_batch[0].split()
             ]
             # logger.info("Finished converting AST to index representation")
@@ -283,6 +286,7 @@ class BatchProgramCC(nn.Module):
             # pooling
             gru_out = F.max_pool1d(gru_out_hidden, gru_out_hidden.size(2)).squeeze(2)
             # gru_out = gru_out[:,-1]
+
 
             return gru_out, gru_out_hidden
         except:

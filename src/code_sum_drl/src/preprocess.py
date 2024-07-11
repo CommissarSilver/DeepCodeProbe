@@ -8,67 +8,67 @@ import ast, asttokens
 import sys
 from lib.data.Tree import *
 import re
-import gensim
+import gensim 
 
 
 # from .Dict import Dict
 def get_opt():
-    Working_path = "/Users/ahura/Nexus/Leto/src/code_sum_drl"
+    Working_path = "/store/travail/vamaj/Leto/src/code_sum_drl"
     parser = argparse.ArgumentParser(description="preprocess.py")
     parser.add_argument("-data_name", default="github-python", help="Data name")
     parser.add_argument(
         "-train_src",
-        default=f"{Working_path}/dataset/train/train0.60.20.2.code",
+        default=f"{Working_path}/dataset_clones/train/all_y_dissimilar.code",
         help="Path to the training source data",
     )
     parser.add_argument(
         "-train_tgt",
-        default=f"{Working_path}/dataset/train/train0.60.20.2.comment",
+        default=f"{Working_path}/dataset_clones/train/all_y_dissimilar.comment",
         help="Path to the training target data",
     )
     parser.add_argument(
         "-train_xe_src",
-        default=f"{Working_path}/dataset/train/train0.60.20.2.code",
+        default=f"{Working_path}/dataset_clones/train/all_y_dissimilar.code",
         help="Path to the pre-training source data",
     )
     parser.add_argument(
         "-train_xe_tgt",
-        default=f"{Working_path}/dataset/train/train0.60.20.2.comment",
+        default=f"{Working_path}/dataset_clones/train/all_y_dissimilar.comment",
         help="Path to the pre-training target data",
     )
     parser.add_argument(
         "-train_pg_src",
-        default=f"{Working_path}/dataset/train/train0.60.20.2.code",
+        default=f"{Working_path}/dataset_clones/train/all_y_dissimilar.code",
         help="Path to the bandit training source data",
     )
     parser.add_argument(
         "-train_pg_tgt",
-        default=f"{Working_path}/dataset/train/train0.60.20.2.comment",
+        default=f"{Working_path}/dataset_clones/train/all_y_dissimilar.comment",
         help="Path to the bandit training target data",
     )
     parser.add_argument(
         "-valid_src",
-        default=f"{Working_path}/dataset/train/dev0.60.20.2.code",
+        default=f"{Working_path}/dataset_clones/train/dev0.60.20.2.code",
         help="Path to the validation source data",
     )
     parser.add_argument(
         "-valid_tgt",
-        default=f"{Working_path}/dataset/train/dev0.60.20.2.comment",
+        default=f"{Working_path}/dataset_clones/train/dev0.60.20.2.comment",
         help="Path to the validation target data",
     )
     parser.add_argument(
         "-test_src",
-        default=f"{Working_path}/dataset/train/test0.60.20.2.code",
+        default=f"{Working_path}/dataset_clones/train/test0.60.20.2.code",
         help="Path to the test source data",
     )
     parser.add_argument(
         "-test_tgt",
-        default=f"{Working_path}/dataset/train/test0.60.20.2.comment",
+        default=f"{Working_path}/dataset_clones/train/test0.60.20.2.comment",
         help="Path to the test target data",
     )
     parser.add_argument(
         "-save_data",
-        default=f"{Working_path}/dataset/train/processed_all_new",
+        default=f"{Working_path}/dataset_clones/train/processed_all_y_dissimilar",
         help="Output file for the prepared data",
     )
     parser.add_argument(
@@ -112,7 +112,8 @@ def makeData(which, srcFile, tgtFile, srcDicts, tgtDicts):
     print("Processing %s & %s ..." % (srcFile, tgtFile))
     srcF = codecs.open(srcFile, "r", "utf-8", errors="ignore")
     tgtF = codecs.open(tgtFile, "r", "utf-8", errors="ignore")
-
+    indexes = []
+    index = 0
     while True:
         sline = srcF.readline().strip()
         tline = tgtF.readline().strip()
@@ -181,6 +182,8 @@ def makeData(which, srcFile, tgtFile, srcDicts, tgtDicts):
                 original_codes += [orginal_sline]
                 original_comments += [original_comment]
                 sizes += [len(src)]
+                indexes.append(index)
+
             except Exception as e:
                 print("Exception: ", e)
                 print(sline)
@@ -189,6 +192,7 @@ def makeData(which, srcFile, tgtFile, srcDicts, tgtDicts):
         else:
             print(ignored)
             ignored += 1
+        index += 1
 
     srcF.close()
     tgtF.close()
@@ -206,7 +210,8 @@ def makeData(which, srcFile, tgtFile, srcDicts, tgtDicts):
         % (len(src), ignored, opt.src_seq_length, opt.tgt_seq_length)
     )
     print(
-        ("Prepared %d sentences " + "(%d ignored due to Exception)") % (len(src), exceps)
+        ("Prepared %d sentences " + "(%d ignored due to Exception)")
+        % (len(src), exceps)
     )
     return (
         src,
@@ -216,6 +221,7 @@ def makeData(which, srcFile, tgtFile, srcDicts, tgtDicts):
         comment_sentences,
         original_codes,
         original_comments,
+        indexes,
     )
 
 
@@ -230,6 +236,7 @@ def makeDataGeneral(which, src_path, tgt_path, dicts):
         comment_sentences,
         res["original_codes"],
         res["original_comments"],
+        res["indexes"],
     ) = makeData(which, src_path, tgt_path, dicts["src"], dicts["tgt"])
     return (
         res,
@@ -260,12 +267,12 @@ def main():
         train_pg_code_sentences,
         train_pg_comment_sentences,
     ) = makeDataGeneral("train_pg", opt.train_pg_src, opt.train_pg_tgt, dicts)
-    save_data["valid"], valid_code_sentences, valid_comment_sentences = makeDataGeneral(
-        "valid", opt.valid_src, opt.valid_tgt, dicts
-    )
-    save_data["test"], test_code_sentences, test_comment_sentences = makeDataGeneral(
-        "test", opt.test_src, opt.test_tgt, dicts
-    )
+    # save_data["valid"], valid_code_sentences, valid_comment_sentences = makeDataGeneral(
+    #     "valid", opt.valid_src, opt.valid_tgt, dicts
+    # )
+    # save_data["test"], test_code_sentences, test_comment_sentences = makeDataGeneral(
+    #     "test", opt.test_src, opt.test_tgt, dicts
+    # )
 
     print('Saving data to "' + opt.save_data + '.train.pt"...')
     torch.save(save_data, opt.save_data + ".train.pt")

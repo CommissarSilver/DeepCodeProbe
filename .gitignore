@@ -1,6 +1,9 @@
 *.pyc
 *.gz
 *.bin
+*.pt
+*.json
+*.json
 .vscode
 .DS_Store
 dataset.zip
@@ -28,3 +31,4 @@ src/probe_models/code_sum_drl/metrics.json
 src/probe_models/summarization_tf/metrics.json
 src/probe_models/summarization_tf/test_metrics.json
 *.pt
+
