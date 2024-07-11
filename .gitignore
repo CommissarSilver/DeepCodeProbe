@@ -30,5 +30,5 @@ models_from_halcon/
 src/probe_models/code_sum_drl/metrics.json
 src/probe_models/summarization_tf/metrics.json
 src/probe_models/summarization_tf/test_metrics.json
-src/probe_models/ast_nn/test_metrics.json
-src/probe_models/ast_nn/metrics.json
+*.pt
+

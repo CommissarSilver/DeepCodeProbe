@@ -36,22 +36,38 @@ class ParserLoss(nn.Module):
         Returns:
             the accumulated loss of d,c,u
         """
-        loss_d = self.ds(
-            d_pred, d_real
-        )  # for ASTNN, there is no need to match d =_pred and d_real lengths.
-
-        # as c is 3 dimensional, there is a need to fill c_real with -1s to match the dimensions of c_pred
-        if c_pred.shape[2] != c_real.shape[2]:
-            num_elements = c_pred.shape[2] - c_real.shape[2]
-            fill_tensor = torch.full((c_real.size(0), c_real.size(1), num_elements), -1)
-            c_real = torch.cat((c_real, fill_tensor), dim=2)
+        # loss_d = self.ds(
+        #     d_pred, d_real
+        # )  # for ASTNN, there is no need to match d =_pred and d_real lengths.
+        # fill c_pred with -1 to match the length of c_real
+        if c_pred.shape[1] != c_real.shape[1]:
+            padding_size = (
+                c_real.shape[1] - c_pred.shape[1]
+                if c_real.shape[1] > c_pred.shape[1]
+                else c_pred.shape[1] - c_real.shape[1]
+            )
+            if c_real.shape[1] > c_pred.shape[1]:
+                c_pred = torch.nn.functional.pad(c_pred, (0, padding_size), value=-1)
+            else:
+                c_real = torch.nn.functional.pad(c_real, (0, padding_size), value=-1)
         loss_c = self.cs(c_pred, c_real)
 
+        if u_pred.shape[1] != u_real.shape[1]:
+            padding_size = (
+                u_real.shape[1] - u_pred.shape[1]
+                if u_real.shape[1] > u_pred.shape[1]
+                else u_pred.shape[1] - u_real.shape[1]
+            )
+            if u_real.shape[1] > u_pred.shape[1]:
+                u_pred = torch.nn.functional.pad(u_pred, (0, padding_size), value=-1)
+            else:
+                u_real = torch.nn.functional.pad(u_real, (0, padding_size), value=-1)
         loss_u = self.us(
-            u_pred, u_real
+            u_pred,
+            u_real,
         )  # same as loss_d, there is no need to match u_pred and u_real lengths
 
-        return loss_d + loss_c + loss_u
+        return loss_c + loss_u
 
     @staticmethod
     def calculate_hits(d_pred, c_pred, u_pred, d_real, c_real, u_real, length_batch):
@@ -72,22 +88,29 @@ class ParserLoss(nn.Module):
         Returns:
             _type_: the number of correct predictions for d,c,u
         """
+        if c_pred.shape[1] != c_real.shape[1]:
+            padding_size = abs(c_real.shape[1] - c_pred.shape[1])
+            if c_real.shape[1] > c_pred.shape[1]:
+                c_pred = torch.nn.functional.pad(c_pred, (0, padding_size), value=-1)
+            else:
+                c_real = torch.nn.functional.pad(c_real, (0, padding_size), value=-1)
 
-        d_hits = torch.round(d_pred).eq(d_real).sum().item()
+        if u_pred.shape[1] != u_real.shape[1]:
+            padding_size = abs(u_real.shape[1] - u_pred.shape[1])
+            if u_real.shape[1] > u_pred.shape[1]:
+                u_pred = torch.nn.functional.pad(u_pred, (0, padding_size), value=-1)
+            else:
+                u_real = torch.nn.functional.pad(u_real, (0, padding_size), value=-1)
+        # d_hits = torch.round(d_pred).eq(d_real).sum().item()
         u_hits = torch.round(u_pred).eq(u_real).sum().item()
-
-        if c_pred.shape[2] != c_real.shape[2]:
-            num_elements = c_pred.shape[2] - c_real.shape[2]
-            fill_tensor = torch.full((c_real.size(0), c_real.size(1), num_elements), -1)
-            c_real = torch.cat((c_real, fill_tensor), dim=2)
         c_hits = torch.round(c_pred).eq(c_real).sum().item()
 
         return (
-            d_hits,
+            0,
             c_hits,
             u_hits,
-            (length_batch * d_pred.size(1)),
-            (length_batch * c_pred.size(1) * c_pred.size(2)),
+            0,
+            (length_batch * c_pred.size(1)),
             (length_batch * u_pred.size(1)),
         )
 
@@ -234,24 +257,34 @@ class ParserLossSumTF(nn.Module):
             the accumulated loss of d,c,u
         """
         # unlike ASTNN, there is a need to match the lengths of d_pred and d_real
-        if d_real.shape[1] != d_pred.shape[1]:
-            num_elements = d_pred.shape[1] - d_real.shape[1]
-            fill_tensor = torch.full((d_real.size(0), num_elements, 2), -1)
-            d_real = torch.cat((d_real, fill_tensor), dim=1)
-        # same goes for cs
         if c_pred.shape[1] != c_real.shape[1]:
-            padding_size = c_pred.shape[1] - c_real.shape[1]
-            c_real = torch.nn.functional.pad(c_real, (0, padding_size), value=-1)
-        # same goes for us
-        if u_real.shape[1] != u_pred.shape[1]:
-            padding_size = u_pred.shape[1] - u_real.shape[1]
-            u_real = torch.nn.functional.pad(u_real, (0, padding_size), value=-1)
-
-        loss_d = self.ds(d_pred, d_real)
+            padding_size = (
+                c_real.shape[1] - c_pred.shape[1]
+                if c_real.shape[1] > c_pred.shape[1]
+                else c_pred.shape[1] - c_real.shape[1]
+            )
+            if c_real.shape[1] > c_pred.shape[1]:
+                c_pred = torch.nn.functional.pad(c_pred, (0, padding_size), value=-1)
+            else:
+                c_real = torch.nn.functional.pad(c_real, (0, padding_size), value=-1)
         loss_c = self.cs(c_pred, c_real)
-        loss_u = self.us(u_pred, u_real)
 
-        return loss_d + loss_c + loss_u
+        if u_pred.shape[1] != u_real.shape[1]:
+            padding_size = (
+                u_real.shape[1] - u_pred.shape[1]
+                if u_real.shape[1] > u_pred.shape[1]
+                else u_pred.shape[1] - u_real.shape[1]
+            )
+            if u_real.shape[1] > u_pred.shape[1]:
+                u_pred = torch.nn.functional.pad(u_pred, (0, padding_size), value=-1)
+            else:
+                u_real = torch.nn.functional.pad(u_real, (0, padding_size), value=-1)
+        loss_u = self.us(
+            u_pred,
+            u_real,
+        )  # same as loss_d, there is no need to match u_pred and u_real lengths
+
+        return loss_c + loss_u
 
     @staticmethod
     def calculate_hits(d_pred, c_pred, u_pred, d_real, c_real, u_real, length_batch):
@@ -272,30 +305,30 @@ class ParserLossSumTF(nn.Module):
         Returns:
             _type_: the number of correct predictions for d,c,u
         """
-        if d_real.shape[1] != d_pred.shape[1]:
-            num_elements = d_pred.shape[1] - d_real.shape[1]
-            fill_tensor = torch.full((d_real.size(0), num_elements, 2), -1)
-            d_real = torch.cat((d_real, fill_tensor), dim=1)
-        # same goes for cs
         if c_pred.shape[1] != c_real.shape[1]:
-            padding_size = c_pred.shape[1] - c_real.shape[1]
-            c_real = torch.nn.functional.pad(c_real, (0, padding_size), value=-1)
-        # same goes for us
-        if u_real.shape[1] != u_pred.shape[1]:
-            padding_size = u_pred.shape[1] - u_real.shape[1]
-            u_real = torch.nn.functional.pad(u_real, (0, padding_size), value=-1)
+            padding_size = abs(c_real.shape[1] - c_pred.shape[1])
+            if c_real.shape[1] > c_pred.shape[1]:
+                c_pred = torch.nn.functional.pad(c_pred, (0, padding_size), value=-1)
+            else:
+                c_real = torch.nn.functional.pad(c_real, (0, padding_size), value=-1)
 
-        d_hits = torch.round(d_pred).eq(d_real).sum().item()
-        c_hits = torch.round(c_pred).eq(c_real).sum().item()
+        if u_pred.shape[1] != u_real.shape[1]:
+            padding_size = abs(u_real.shape[1] - u_pred.shape[1])
+            if u_real.shape[1] > u_pred.shape[1]:
+                u_pred = torch.nn.functional.pad(u_pred, (0, padding_size), value=-1)
+            else:
+                u_real = torch.nn.functional.pad(u_real, (0, padding_size), value=-1)
+        # d_hits = torch.round(d_pred).eq(d_real).sum().item()
         u_hits = torch.round(u_pred).eq(u_real).sum().item()
+        c_hits = torch.round(c_pred).eq(c_real).sum().item()
 
         return (
-            d_hits,
+            0,
             c_hits,
             u_hits,
-            (length_batch * d_pred.size(1) * d_pred.size(2)),
-            (length_batch * c_pred.size(1)),
-            (length_batch * u_pred.size(1)),
+            0,
+            (c_pred.size(0) * c_pred.size(1)),
+            (u_pred.size(0) * u_pred.size(1)),
         )
 
 
@@ -334,16 +367,15 @@ class ParserLossCodeSumDRL(nn.Module):
             the accumulated loss of d,c,u
         """
         # unlike ASTNN, there is a need to match the lengths of d_pred and d_real
-
-        d_real = torch.tensor([d + [-1] * (d_pred.shape[1] - len(d)) for d in d_real])
         c_real = torch.tensor([c + [-1] * (c_pred.shape[1] - len(c)) for c in c_real])
         u_real = torch.tensor([u + [-1] * (u_pred.shape[1] - len(u)) for u in u_real])
-
-        loss_d = self.ds(d_pred, d_real)
         loss_c = self.cs(c_pred, c_real)
-        loss_u = self.us(u_pred, u_real)
 
-        return loss_d + loss_c + loss_u
+        loss_u = self.us(
+            u_pred, u_real
+        )  # same as loss_d, there is no need to match u_pred and u_real lengths
+
+        return loss_c + loss_u
 
     @staticmethod
     def calculate_hits(d_pred, c_pred, u_pred, d_real, c_real, u_real):
@@ -365,19 +397,17 @@ class ParserLossCodeSumDRL(nn.Module):
             _type_: the number of correct predictions for d,c,u
         """
 
-        d_real = torch.tensor([d + [-1] * (d_pred.shape[1] - len(d)) for d in d_real])
         c_real = torch.tensor([c + [-1] * (c_pred.shape[1] - len(c)) for c in c_real])
         u_real = torch.tensor([u + [-1] * (u_pred.shape[1] - len(u)) for u in u_real])
-
-        d_hits = torch.round(d_pred).eq(d_real).sum().item()
-        c_hits = torch.round(c_pred).eq(c_real).sum().item()
+        # d_hits = torch.round(d_pred).eq(d_real).sum().item()
         u_hits = torch.round(u_pred).eq(u_real).sum().item()
+        c_hits = torch.round(c_pred).eq(c_real).sum().item()
 
         return (
-            d_hits,
+            0,
             c_hits,
             u_hits,
-            d_pred.size(0) * d_pred.size(1),
-            c_real.size(0) * c_real.size(1),
-            u_real.size(0) * u_real.size(1),
+            0,
+            (c_pred.size(0) * c_pred.size(1)),
+            (u_pred.size(0) * u_pred.size(1)),
         )

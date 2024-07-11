@@ -28,7 +28,7 @@ logger = logging.getLogger(LOGGER_NAME)
 
 # DEVICE Configurations
 USE_CUDA = torch.cuda.is_available()
-DEVICE = 'cpu'
+DEVICE = "cpu"
 
 
 def train_probe(
@@ -74,13 +74,13 @@ def train_probe(
     )
 
     # Using Adam optimizer with learning rate of 1e-3
-    optimizer = torch.optim.Adam(probe_model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(probe_model.parameters(), lr=0.01)
     # Reduce learning rate when a metric has stopped improving.
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode="min",
         factor=0.1,
-        patience=2,
+        patience=5,
     )
 
     criterion = probe_loss
@@ -143,19 +143,19 @@ def train_probe(
         )
         scheduler.step(eval_loss)
 
-        logger.info(
-            f"[epoch {epoch}] train loss: {round(training_loss, 4)}, validation loss: {round(eval_loss, 4)}"
-        )
-        logger.info(
-            f"[epoch {epoch}] D accuracy: {round(acc_d, 4)}, C accuracy: {round(acc_c, 6)}, U accuracy: {round(acc_u, 4)}"
-        )
+        # logger.info(
+        #     f"[epoch {epoch}] train loss: {round(training_loss, 4)}, validation loss: {round(eval_loss.item(), 4)}"
+        # )
+        # logger.info(
+        #     f"[epoch {epoch}] D accuracy: {round(acc_d.item(), 4)}, C accuracy: {round(acc_c.item(), 6)}, U accuracy: {round(acc_u.item(), 4)}"
+        # )
 
         metrics["training_loss"].append(training_loss)
         metrics["validation_loss"].append(eval_loss)
 
-        metrics["D_accuracy"].append(round(acc_d, 4))
-        metrics["C_accuracy"].append(round(acc_c, 4))
-        metrics["U_accuracy"].append(round(acc_u, 4))
+        
+        metrics["C_accuracy"].append(round(acc_c.item(), 4))
+        metrics["U_accuracy"].append(round(acc_u.item(), 4))
 
         if eval_loss < best_eval_loss:
             logger.info("Saving model checkpoint")
@@ -287,9 +287,7 @@ def eval_probe(
                 pass
 
         # Computing accuracy for 'D', 'C', and 'U' from hit counts
-        total_accuracy_d = sum([x[0] for x in d_hits_total]) / sum(
-            x[1] for x in d_hits_total
-        )
+        total_accuracy_d = 0
         total_accuracy_c = sum([x[0] for x in c_hits_total]) / sum(
             x[1] for x in c_hits_total
         )
@@ -299,9 +297,9 @@ def eval_probe(
 
         return (
             (eval_loss / len(valid_dataloader)),
-            total_accuracy_d.data.item(),
-            total_accuracy_c.data.item(),
-            total_accuracy_u.data.item(),
+            0,
+            total_accuracy_c,
+            total_accuracy_u,
         )
 
 
@@ -411,10 +409,11 @@ def train_probe_code_sum_drl(
 
             metrics["training_loss"].append(round(sum(training_loss), 4))
             metrics["validation_loss"].append(round(eval_loss, 4))
+
             metrics["D_accuracy"].append(round(acc_d, 4))
             metrics["C_accuracy"].append(round(acc_c, 4))
             metrics["U_accuracy"].append(round(acc_u, 4))
-            
+
             if eval_loss < best_eval_loss:
                 logger.info("Saving model checkpoint")
                 if not os.path.exists(output_path):
@@ -523,9 +522,7 @@ def eval_probe_code_sum_drl(
             u_hits_total.append((u_hits, u_hits_len))
 
         # Computing accuracy for 'D', 'C', and 'U' from hit counts
-        total_accuracy_d = sum([x[0] for x in d_hits_total]) / sum(
-            x[1] for x in d_hits_total
-        )
+        total_accuracy_d = 0
         total_accuracy_c = sum([x[0] for x in c_hits_total]) / sum(
             x[1] for x in c_hits_total
         )

@@ -46,7 +46,7 @@ parser.add_argument(
     type=str,
     help="Language of the dataset. Only for AST-NN",
     choices=["java", "c"],
-    default="c",
+    default="java",
 )
 parser.add_argument(
     "--train_epochs",
@@ -87,7 +87,7 @@ device = args.device
 if args.model == "ast_nn":
     from gensim.models.word2vec import Word2Vec
 
-    from ast_nn.src.code_to_repr import code_to_index
+    from ast_nn.src.code_to_repr import code_to_index, TokenIndexerC, TokenIndexerJava
     from ast_nn.src.data_pipeline import process_input
     from ast_nn.src.model import BatchProgramCC
     from ast_probe.probe import (
@@ -102,40 +102,44 @@ if args.model == "ast_nn":
         "valid": os.path.join(args.dataset_path, args.language, "valid.jsonl"),
         "test": os.path.join(args.dataset_path, args.language, "test.jsonl"),
     }
+    token_indexer = TokenIndexerC() if args.language == "c" else TokenIndexerJava()
 
-    train_set = load_dataset("json", data_files=data_files, split="train")
-    valid_set = load_dataset("json", data_files=data_files, split="valid")
-    test_set = load_dataset("json", data_files=data_files, split="test")
+    train_set = load_dataset("json", data_files=data_files, split="train[:4096]")
+    valid_set = load_dataset("json", data_files=data_files, split="valid[:4096]")
+    test_set = load_dataset("json", data_files=data_files, split="test[:4096]")
 
     train_set = train_set.map(
         lambda e: code_to_index(
             e["original_string"],
             args.language,
+            indexer=token_indexer,
         )
     )
     valid_set = valid_set.map(
         lambda e: code_to_index(
             e["original_string"],
             args.language,
+            indexer=token_indexer,
         )
     )
     test_set = test_set.map(
         lambda e: code_to_index(
             e["original_string"],
             args.language,
+            indexer=token_indexer,
         )
     )
 
     max_d_len_train = max([len(x) for x in train_set["d"]])
-    max_c_len_train = max([len(j) for x in train_set["c"] for j in x])
+    max_c_len_train = max([len(x) for x in train_set["c"]])
     max_u_len_train = max([len(x) for x in train_set["u"]])
 
     max_d_len_valid = max([len(x) for x in valid_set["d"]])
-    max_c_len_valid = max([len(j) for x in valid_set["c"] for j in x])
+    max_c_len_valid = max([len(x) for x in valid_set["c"]])
     max_u_len_valid = max([len(x) for x in valid_set["u"]])
 
     max_d_len_test = max([len(x) for x in test_set["d"]])
-    max_c_len_test = max([len(j) for x in test_set["c"] for j in x])
+    max_c_len_test = max([len(x) for x in test_set["c"]])
     max_u_len_test = max([len(x) for x in test_set["u"]])
 
     max_d_len, max_c_len, max_u_len = (
@@ -155,7 +159,7 @@ if args.model == "ast_nn":
             max_u_len_test,
         ),
     )
-
+    print(f"Max D: {max_d_len}, Max C: {max_c_len}, Max U: {max_u_len}")
     word2vec = Word2Vec.load(
         os.path.join(
             args.dataset_path,

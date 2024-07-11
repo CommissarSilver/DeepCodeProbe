@@ -186,6 +186,110 @@ class funcGNN(torch.nn.Module):
 
         return features
 
+    def get_gradient_from_output_to_input(self, data):
+        new_data = dict()
+        edges_1 = data["graph_1"] + [[y, x] for x, y in data["graph_1"]]
+
+        edges_2 = data["graph_2"] + [[y, x] for x, y in data["graph_2"]]
+
+        edges_1 = torch.from_numpy(np.array(edges_1, dtype=np.int64).T).type(torch.long)
+        edges_2 = torch.from_numpy(np.array(edges_2, dtype=np.int64).T).type(torch.long)
+
+        features_1, features_2 = [], []
+        features_1_temp = data["labels_1"].copy()
+        features_2_temp = data["labels_2"].copy()
+
+        for n in data["labels_1"]:
+            features_1.append(
+                [
+                    1.0 if self.global_labels[n] == i else 0.0
+                    for i in self.global_labels.values()
+                ]
+            )
+
+        for n in data["labels_2"]:
+            features_2.append(
+                [
+                    1.0 if self.global_labels[n] == i else 0.0
+                    for i in self.global_labels.values()
+                ]
+            )
+
+        features_1 = torch.FloatTensor(np.array(features_1)).requires_grad_(True)
+        features_2 = torch.FloatTensor(np.array(features_2)).requires_grad_(True)
+
+        new_data["edge_index_1"] = edges_1
+        new_data["edge_index_2"] = edges_2
+
+        new_data["features_1"] = features_1
+        new_data["features_2"] = features_2
+
+        norm_ged = data["ged"] / (0.5 * (len(data["labels_1"]) + len(data["labels_2"])))
+
+        new_data["target"] = torch.from_numpy(np.exp(-norm_ged).reshape(1, 1)).float()
+
+        abstract_features_1 = self.convolutional_pass(edges_1, features_1)
+        abstract_features_2 = self.convolutional_pass(edges_2, features_2)
+
+        pooled_features_1 = self.attention(abstract_features_1)
+        pooled_features_2 = self.attention(abstract_features_2)
+
+        scores = self.tensor_network(pooled_features_1, pooled_features_2)
+        scores = torch.t(scores)
+
+        scores = torch.nn.functional.relu(self.fully_connected_first(scores))
+        score = torch.sigmoid(self.scoring_layer(scores))
+
+        score.backward()
+
+        gradients_features_1 = features_1.grad
+        gradients_features_2 = features_2.grad
+
+        normalized_gradients_features_1 = torch.abs(gradients_features_1) / torch.sum(
+            torch.abs(gradients_features_1)
+        )
+        normalized_gradients_features_2 = torch.abs(gradients_features_2) / torch.sum(
+            torch.abs(gradients_features_2)
+        )
+
+        saliency_map_1 = normalized_gradients_features_1.detach().numpy()
+        salinecy_map_2 = normalized_gradients_features_2.detach().numpy()
+
+        import matplotlib.pyplot as plt
+
+        plt.figure(figsize=(20, 6))
+        plt.bar(
+            range(len(features_1_temp)),
+            np.mean(saliency_map_1, axis=1),
+            tick_label=features_1_temp,
+        )
+        plt.xlabel("Input Sequences")
+        plt.ylabel("Aggregate Saliency Score")
+        plt.title("Aggregate Saliency Map for Text Input")
+        plt.xticks(
+            range(len(features_1_temp)), features_1_temp, rotation=45
+        )  # Rotate labels by 45 degrees
+
+        # save the figure
+        plt.savefig("saliency_map_1.png", bbox_inches="tight")
+
+        plt.figure(figsize=(20, 6))
+        plt.bar(
+            range(len(features_2_temp)),
+            np.mean(salinecy_map_2, axis=1),
+            tick_label=features_2_temp,
+        )
+        plt.xlabel(
+            "Input Sequences",
+        )
+        plt.ylabel("Aggregate Saliency Score")
+        plt.title("Aggregate Saliency Map for Text Input")
+        plt.xticks(range(len(features_2_temp)), features_2_temp, rotation=45)
+        # save the figure
+        plt.savefig("saliency_map_2.png", bbox_inches="tight")
+
+        return "hi"
+
 
 class funcGNNTrainer(object):
     """
@@ -221,7 +325,9 @@ class funcGNNTrainer(object):
             self.global_labels = self.global_labels.union(set(data["labels_1"]))
             self.global_labels = self.global_labels.union(set(data["labels_2"]))
         self.global_labels = list(self.global_labels)
-        self.global_labels = {val: index for index, val in enumerate(self.global_labels)}
+        self.global_labels = {
+            val: index for index, val in enumerate(self.global_labels)
+        }
         self.number_of_labels = len(self.global_labels)
 
     def create_batches(self):
