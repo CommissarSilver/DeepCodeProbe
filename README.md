@@ -1,5 +1,3 @@
-This repository contains the codes and artifacts for our paper, [DeepCodeProbe: Towards Understanding What Models Trained on Code Learn](https://arxiv.org/abs/2407.08890).
-
 `DeepCodeProbe` is a tool designed for probing small ML models trained on syntactic representations of code in order to provide interpretability on their syntax learning capbilities alongside the represeantions they learn. The tool is designed to be model agnostic and can be used with any model that uses AST/CFG as input.
 
 # Dependencies
@@ -82,17 +80,4 @@ python src/validate_probe.py --model {model_name}
 ```
 Where `{model_name}` is the name of the model you want to evaluate the probe for. Similar to training the probes, each model requires a different probe configuration. The configurations for each model are outlined in `validate_probe.py`.
 
-# How to Cite
-If you use this code in your research, please cite the following paper:
-
-```
-@misc{majdinasab2024deepcodeprobeunderstandingmodelstrained,
-      title={DeepCodeProbe: Towards Understanding What Models Trained on Code Learn}, 
-      author={Vahid Majdinasab and Amin Nikanjam and Foutse Khomh},
-      year={2024},
-      eprint={2407.08890},
-      archivePrefix={arXiv},
-      primaryClass={cs.SE},
-      url={https://arxiv.org/abs/2407.08890}, 
-}
 ```
