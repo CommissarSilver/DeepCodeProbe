@@ -30,7 +30,9 @@ src/funcgnn/models
 
 #Summarization-TF
 src/summarization_tf/dataset
-src/summarization_tf/models_from_halcon
+src/summarization_tf/models_from_halcon/checkpoints
+src/summarization_tf/models_from_halcon/models
+src/summarization_tf/models_from_halcon/runs
 
 #Probe Models
 src/probe_models
