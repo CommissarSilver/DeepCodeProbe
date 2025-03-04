@@ -5,22 +5,32 @@
 __pycache__
 
 logs
+dataset/
+outputFiles/
 
-src/summarization_tf/dataset_original
-src/summarization_tf/parser_original
+#AST-NN
+src/ast_nn/dataset/
+src/ast_nn/models/
+
+#AST-Probe
+src/ast_probe/dataset
+src/ast_probe/grammars
+
+#CodeSumDRL
+src/code_sum_drl/dataset
+src/code_sum_drl/models
+src/code_sum_drl/dataset.zip
+
+#CSCGDual
+src/cscg_dual/dataset
+
+#FuncGNN
+src/funcgnn/dataset
+src/funcgnn/models
+
+#Summarization-TF
 src/summarization_tf/dataset
-src/summarization_tf/parser
-/Users/ahura/Nexus/Leto/runs
-runs/
-src/summarization_tf/checkpoints/*
-models
-results/*
-dataset_clones/*
-*/models_from_halcon/*
-models_from_halcon/
-src/probe_models/code_sum_drl/metrics.json
-src/probe_models/summarization_tf/metrics.json
-src/probe_models/summarization_tf/test_metrics.json
-*.pt
+src/summarization_tf/models_from_halcon
 
-/dataset
+#Probe Models
+src/probe_models

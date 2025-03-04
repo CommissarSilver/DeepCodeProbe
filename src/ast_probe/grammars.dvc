@@ -1,0 +1,6 @@
+outs:
+- md5: 3c515266ae6728eae258ebe0b290c4e8.dir
+  size: 10834839
+  nfiles: 94
+  hash: md5
+  path: grammars
