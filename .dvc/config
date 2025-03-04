@@ -1,0 +1,6 @@
+[core]
+    remote = local_storage
+['remote "gdrive"']
+    url = gdrive://1ThUgrW5psCGysGnojzB1dI5DWvZuqJXe
+['remote "local_storage"']
+    url = /Users/ahvra/Nexus/DCP_Storge
