@@ -1,20 +1,11 @@
 *.pyc
 *.gz
-*.bin
-*.pt
-*.json
-*.json
 .vscode
 .DS_Store
-dataset.zip
 __pycache__
-dataset_*
-dataset
+
 logs
-grammars
-trained_models
-embeddings
-outputFiles
+
 src/summarization_tf/dataset_original
 src/summarization_tf/parser_original
 src/summarization_tf/dataset
@@ -32,3 +23,4 @@ src/probe_models/summarization_tf/metrics.json
 src/probe_models/summarization_tf/test_metrics.json
 *.pt
 
+/dataset
