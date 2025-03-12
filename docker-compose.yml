@@ -3,4 +3,8 @@ services:
     build:
       context: ./src/infercode
       dockerfile: Dockerfile
-    
+
+  type4py:
+    build:
+      context: ./src/type4py
+      dockerfile: Dockerfile
