@@ -14,12 +14,9 @@ ENV T4PY_LOCAL_MODE="1"
 # The current model files are pickled with the below ver. of sklearn
 RUN pip install scikit-learn==0.24.1
 
-# Install Annoy from a pre-built binary wheel to avoid weird SIGILL error on some systems
-RUN pip install https://type4py.com/pretrained_models/annoy-wheels/annoy-1.17.0-cp39-cp39-linux_x86_64.whl
-
 RUN pip install -e .
 # Web server's required packages
-RUN pip install -r type4py/server/requirements.txt
+RUN pip install -r requirements.txt
 
 # Install NLTK corpus
 RUN python -c "import nltk; nltk.download('stopwords')"
