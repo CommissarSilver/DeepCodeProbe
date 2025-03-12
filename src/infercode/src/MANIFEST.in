@@ -1,2 +1,0 @@
-include sentencepiece_vocab/*
-recursive-include infercode/sentencepiece_vocab *
