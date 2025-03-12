@@ -1,0 +1,3 @@
+tasks:
+   - before: pip3 install infercode
+     command: infercode setup.py
