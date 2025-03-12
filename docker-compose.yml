@@ -13,3 +13,8 @@ services:
     build:
       context: ./src/recoder
       dockerfile: Dockerfile
+
+  dear:
+    build:
+      context: ./src/dear
+      dockerfile: Dockerfile
