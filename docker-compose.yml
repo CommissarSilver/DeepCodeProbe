@@ -1,0 +1,6 @@
+services:
+  infercode:
+    build:
+      context: ./src/infercode
+      dockerfile: Dockerfile
+    
