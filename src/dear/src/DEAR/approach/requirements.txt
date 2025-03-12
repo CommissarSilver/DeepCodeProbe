@@ -1,0 +1,32 @@
+### Requirements for Dear    ###
+
+## Keras neural-network library ##
+keras
+
+## Tensorflow neural-network library ##
+tensorflow >= 1.11.0   # CPU Version of TensorFlow.
+# tensorflow-gpu  >= 1.11.0  # GPU version of TensorFlow.
+
+## MSGPack ##
+msgpack < 1.20.0
+
+## NumPy python library##
+numpy < 1.20.0
+
+## ProgressBar ##
+progressbar2
+
+## RAdam Optimizer ##
+keras-rectified-adam
+
+## Scikit-Learn ##
+scikit-learn
+
+##  TQDM ##
+tqdm
+
+## Scipy ##
+scipy
+
+##Gensim##
+gensim < 4.0.0
