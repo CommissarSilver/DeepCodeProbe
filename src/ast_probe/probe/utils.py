@@ -87,6 +87,10 @@ def get_embeddings_code_sum_drl(all_inputs, model, **kwargs):
     # embs = torch.cat((embs, zero_padding), dim=1)
     return embs
 
+def get_embeddings_infercode(all_inputs, model, **kwargs):
+    embs = model.encode(all_inputs)
+
+    return embs
 
 def collator_fn_astnn(batch):
     """
@@ -181,3 +185,39 @@ def collator_fn_sum_tf(batch):
 
 def collator_fun_code_sum_drl(batch):
     pass
+
+
+def collator_fn_infercode(batch):
+    """
+    collator function for Infercode
+
+    Args:
+        batch (_type_): the batch of codes to be processed into d,c,u tuple
+
+    """
+    original_code_string = [b["original_string"] for b in batch]
+
+    cs = [b["c"] for b in batch]
+    ds = [b["d"] for b in batch]
+    us = [b["u"] for b in batch]
+
+    batch_len_tokens_d = np.max([len(m) for m in ds])
+    batch_len_tokens_c = np.max([len(m) for m in cs])
+    batch_len_tokens_u = np.max([len(m) for m in us])
+
+    ds = [d + [-1] * (batch_len_tokens_d - len(d)) for d in ds]
+    cs = [c + [-1] * (batch_len_tokens_c - len(c)) for c in cs]
+    us = [u + [-1] * (batch_len_tokens_u - len(u)) for u in us]
+
+    ds_tensor = torch.tensor(ds)
+    cs_tensor = torch.tensor(cs)
+    us_tensor = torch.tensor(us)
+
+    return (
+        ds_tensor,
+        cs_tensor,
+        us_tensor,
+        torch.tensor(batch_len_tokens_c),
+        original_code_string,
+    )
+
