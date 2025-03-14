@@ -86,6 +86,7 @@ def train_probe(
     criterion = probe_loss
 
     probe_model.train()  # Set the probe model to training mode
+    #! this needs to be commented out when probing infercode since it is not a torch models
     model_under_probe.eval()  # Set the model under probe to evaluation mode
 
     best_eval_loss = float("inf")
@@ -153,7 +154,6 @@ def train_probe(
         metrics["training_loss"].append(training_loss)
         metrics["validation_loss"].append(eval_loss)
 
-        
         metrics["C_accuracy"].append(round(acc_c.item(), 4))
         metrics["U_accuracy"].append(round(acc_u.item(), 4))
 

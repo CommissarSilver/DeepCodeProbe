@@ -50,10 +50,10 @@ def get_embeddings_funcgnn(all_inputs, model, **kwargs):
 
             padded_tensor[padded_tensor == 0] = -1
             embs = padded_tensor
-        
+
         elif embs[0].size(0) == 64:
             embs = torch.stack(embs)
-            embs=embs.squeeze(-1)
+            embs = embs.squeeze(-1)
 
     return embs
 
@@ -87,10 +87,12 @@ def get_embeddings_code_sum_drl(all_inputs, model, **kwargs):
     # embs = torch.cat((embs, zero_padding), dim=1)
     return embs
 
+
 def get_embeddings_infercode(all_inputs, model, **kwargs):
-    embs = model.encode(all_inputs)
+    embs = torch.from_numpy(model.encode(all_inputs))
 
     return embs
+
 
 def collator_fn_astnn(batch):
     """
@@ -220,4 +222,3 @@ def collator_fn_infercode(batch):
         torch.tensor(batch_len_tokens_c),
         original_code_string,
     )
-

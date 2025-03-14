@@ -732,10 +732,7 @@ elif args.model == "infercode":
     embeddings[: word2vec.vectors.shape[0]] = word2vec.vectors
 
     model_to_probe = InferCodeClient(
-        model_path=os.path.join(
-            os.getcwd(), "src", "infercode", "models", "infercode_model.pth"
-        ),
-        device=device,
+        language=args.language,
     )
 
     probe_model = ParserProbe(
