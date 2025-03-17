@@ -745,3 +745,95 @@ elif args.model == "infercode":
         train_epochs=args.train_epochs,
         output_path=os.path.join(os.getcwd(), "src", "probe_models", args.model),
     )
+
+elif args.model == "recoder":
+    from recoder.src.code_to_repr import code_to_index
+    from recoder.src.run import test
+    from ast_probe.probe import (
+        ParserLoss,
+        ParserProbe,
+        collator_fn_recoder,
+        get_embeddings_recoder,
+    )
+
+    data_files = {
+        "train": os.path.join(args.dataset_path, args.language, "train.jsonl"),
+        "valid": os.path.join(args.dataset_path, args.language, "valid.jsonl"),
+        "test": os.path.join(args.dataset_path, args.language, "test.jsonl"),
+    }
+
+    train_set = load_dataset("json", data_files=data_files, split="train[:4096]")
+    valid_set = load_dataset("json", data_files=data_files, split="valid[:4096]")
+    test_set = load_dataset("json", data_files=data_files, split="test[:4096]")
+
+    train_set = train_set.map(
+        lambda e: code_to_index(
+            e["original_string"],
+        )
+    )
+    valid_set = valid_set.map(
+        lambda e: code_to_index(
+            e["original_string"],
+        )
+    )
+    test_set = test_set.map(
+        lambda e: code_to_index(
+            e["original_string"],
+        )
+    )
+
+    max_d_len_train = max([len(x) for x in train_set["d"]])
+    max_c_len_train = max([len(x) for x in train_set["c"]])
+    max_u_len_train = max([len(x) for x in train_set["u"]])
+
+    max_d_len_valid = max([len(x) for x in valid_set["d"]])
+    max_c_len_valid = max([len(x) for x in valid_set["c"]])
+    max_u_len_valid = max([len(x) for x in valid_set["u"]])
+
+    max_d_len_test = max([len(x) for x in test_set["d"]])
+    max_c_len_test = max([len(x) for x in test_set["c"]])
+    max_u_len_test = max([len(x) for x in test_set["u"]])
+
+    max_d_len, max_c_len, max_u_len = (
+        max(
+            max_d_len_train,
+            max_d_len_valid,
+            max_d_len_test,
+        ),
+        max(
+            max_c_len_train,
+            max_c_len_valid,
+            max_c_len_test,
+        ),
+        max(
+            max_u_len_train,
+            max_u_len_valid,
+            max_u_len_test,
+        ),
+    )
+    print(f"Max D: {max_d_len}, Max C: {max_c_len}, Max U: {max_u_len}")
+
+    model_to_probe = test()
+
+    probe_model = ParserProbe(
+        probe_rank=args.probe_rank,
+        hidden_dim=args.probe_hidden_dim,
+        number_labels_d=max_d_len,
+        number_labels_c=max_c_len,
+        number_labels_u=max_u_len,
+    ).to(device)
+
+    probe_utils.train_probe(
+        embedding_func=get_embeddings_recoder,
+        collator_fn=collator_fn_recoder,
+        train_dataset=train_set,
+        valid_dataset=valid_set,
+        test_dataset=test_set,
+        batch_size=args.batch_size,
+        patience=args.patience,
+        probe_model=probe_model,
+        probe_loss=ParserLoss(max_c_len=max_c_len),
+        model_under_probe=model_to_probe,
+        train_epochs=args.train_epochs,
+        output_path=os.path.join(os.getcwd(), "src", "probe_models", args.model),
+    )

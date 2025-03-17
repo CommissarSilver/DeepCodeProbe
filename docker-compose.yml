@@ -5,15 +5,17 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./src/infercode/src:/app/infercode
-
-  type4py:
-    build:
-      context: ./src/type4py
-      dockerfile: Dockerfile
-
+  
   recoder:
     build:
       context: ./src/recoder
+      dockerfile: Dockerfile
+    volumes:
+      - ./src/recoder/src:/app
+  
+  type4py:
+    build:
+      context: ./src/type4py
       dockerfile: Dockerfile
 
   dear:
