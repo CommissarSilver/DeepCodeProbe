@@ -168,7 +168,7 @@ class Decoder(nn.Module):
         x = self.dropout(ppathEm + self.position(inputrule))
         for trans in self.decodeTransformerBlocksP:
             x = trans(x, rulemask, decode, antimask, nlencode, nlmask)
-        decode = x
+        decode = x #! ITS HERE. THE DENSE LASYER IS HERE
         genP1, _ = self.copy2(rulenoter.unsqueeze(0), decode)
         res1 = F.softmax(genP1, dim=-1)
         genP, prob = self.copy(nlencode, decode)
@@ -207,8 +207,61 @@ class Decoder(nn.Module):
         #totalloss = torch.mean(totalloss)
         return totalloss, resSoftmax
 
-
-
+    def get_embeddings(self, inputnl, inputnlad, inputrule, inputruleparent, inputrulechild, inputParent, inputParentPath, inputdepth, inputcodechar, tmpf, tmpc, tmpindex, tmpchar, tmpindex2, rulead, antimask, inputRes=None, mode="train"):
+        selfmask = antimask
+        #selfmask = antimask.unsqueeze(0).repeat(inputtype.size(0), 1, 1).unsqueeze(1)
+        admask = torch.eq(inputdepth, 1)#.unsqueeze(0).repeat(inputtype.size(0), 1, 1).float()
+        rulemask = torch.gt(inputrule, 0)
+        inputParent = inputParent.float()
+        inputnlad = inputnlad.float()
+        #encode_token
+        charEm = self.char_embedding(tmpchar.long())
+        charEm = self.conv(charEm.permute(0, 3, 1, 2))
+        charEm = charEm.permute(0, 2, 3, 1).squeeze(dim=-2)
+        rule_token_embedding = self.rule_token_embedding(tmpindex2[0])
+        rule_token_embedding = rule_token_embedding + charEm[0]
+        #encode_nl
+        #print(rule_token_embedding.size())
+        nlencoding = F.embedding(inputnl.long(), rule_token_embedding)
+        charEm = self.char_embedding(inputcodechar.long())
+        charEm = self.conv(charEm.permute(0, 3, 1, 2))
+        charEm = charEm.permute(0, 2, 3, 1).squeeze(dim=-2)
+        nlencoding += self.position(inputnl)
+        nlencode, nlmask = self.encoder(nlencoding, inputnlad, inputnl, inputdepth, charEm)
+        #encode_rule
+        childEm = F.embedding(tmpc, rule_token_embedding)#self.rule_token_embedding(tmpc)
+        childEm = self.conv(childEm.permute(0, 3, 1, 2))
+        childEm = childEm.permute(0, 2, 3, 1).squeeze(dim=-2)
+        childEm = self.layernorm(childEm)
+        fatherEm = F.embedding(tmpf, rule_token_embedding)#self.rule_token_embedding(tmpf)
+        ruleEmCom = self.rule_conv(torch.stack([fatherEm, childEm], dim=-2).permute(0, 3, 1, 2))
+        ruleEmCom = self.layernorm(ruleEmCom.permute(0, 2, 3, 1).squeeze(dim=-2))
+        x = self.rule_embedding(tmpindex[0])
+        rulenoter = x[:self.cnum]
+        ruleter = x[self.cnum:]
+        for i in range(9):
+            rulenoter = self.gcnnm(rulenoter, rulead[0], ruleEmCom[0]).view(self.cnum, self.embedding_size)
+        ruleselect = torch.cat([rulenoter, ruleter], dim=0)
+        ruleEm = F.embedding(inputrule, ruleselect)#self.rule_embedding(inputrule)
+        Ppath = F.embedding(inputrulechild, rule_token_embedding)#self.rule_token_embedding(inputrulechild)
+        ppathEm = self.path_conv(Ppath.permute(0, 3, 1, 2))
+        ppathEm = ppathEm.permute(0, 2, 3, 1).squeeze(dim=-2)
+        ppathEm = self.layernorm(ppathEm)
+        x = self.dropout(ruleEm + self.position(inputrule))
+        for trans in self.encodeTransformerBlock:
+            x = trans(x, selfmask, nlencode, nlmask, ppathEm, inputParent, admask)
+        decode = x
+        #ppath
+        Ppath = F.embedding(inputParentPath, rule_token_embedding)#self.rule_token_embedding(inputParentPath)
+        ppathEm = self.path_conv(Ppath.permute(0, 3, 1, 2))
+        ppathEm = ppathEm.permute(0, 2, 3, 1).squeeze(dim=-2)
+        ppathEm = self.layernorm(ppathEm)
+        x = self.dropout(ppathEm + self.position(inputrule))
+        for trans in self.decodeTransformerBlocksP:
+            x = trans(x, rulemask, decode, antimask, nlencode, nlmask)
+        decode = x
+        
+        return decode
 class JointEmbber(nn.Module):
     def __init__(self, args):
         super(JointEmbber, self).__init__()
