@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copy the entire infercode directory into the container
 COPY src /app/infercode/
-
+COPY dataset/tree-sitter-parsers-Linux /root/.tree-sitter/tree-sitter-parsers-Linux
 # Install infercode dependencies without installing infercode itself
 RUN pip3 install --no-cache-dir bidict==0.21.2 coloredlogs==15.0.1 dpu-utils==0.2.19 \
     keras-radam==0.15.0 numpy==1.19.4 protobuf==3.14.0 scikit-learn==0.24.0 \
