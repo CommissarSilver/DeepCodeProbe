@@ -34,12 +34,14 @@ def code_to_ast(code: str):
 
 
 def ast_to_index(tree, liness):
+    dcu_tuple = {"d": [], "c": [], "u": []}
+
     tmproot = getroottree(generateAST(tree))
     # the original code reads a lineId to get the subroot
-    # this will be replaced into a text for each data point. unfortunatley given 
+    # this will be replaced into a text for each data point. unfortunatley given
     # the time constraint, making it work regardless of the input is not possible.
     # so running this will take a very long time.
-    lineid = eval(open("line.txt", "r").read().strip()) 
+    lineid = eval(open("line.txt", "r").read().strip())
     currroot = getNodeById(tmproot, lineid)
     lnode, mnode = getSubroot(currroot)
     oldcode = liness[lineid - 1]
@@ -81,7 +83,7 @@ def ast_to_index(tree, liness):
                 "treeroot": treeroot,
                 "troot": troot,
                 "oldcode": oldcode,
-                "filepath": 'filepath',
+                "filepath": "filepath",
                 "subroot": subroot,
                 "vardic": vardic,
                 "typedic": typedic,
@@ -92,16 +94,24 @@ def ast_to_index(tree, liness):
                 "mode": 0,
                 "line": lineid,
                 "isa": False,
+                "children_id": cid,
             }
         )
+    for line_num, line in enumerate(liness):
+        dcu_tuple["d"].append(line_num)  # position of the node
+        dcu_tuple["c"].append(line["children_id"])  # children of the node
+        dcu_tuple["u"].append(line["vardict"])  # type of the node
+
+    return data, dcu_tuple
 
 
 def code_to_index(code):
     try:
         tree, out = code_to_ast(code)
-        return ast_to_index(tree, out)
+        data, dcu_tuple = ast_to_index(tree, out)
+        return data, dcu_tuple
     except:
-        return {"d": [], "c": [], "u": []}
+        return [], {"d": [], "c": [], "u": []}
 
 
 if __name__ == "__main__":
