@@ -32,7 +32,14 @@ parser.add_argument(
     "--model",
     type=str,
     help="Model to probe",
-    choices=["ast_nn", "funcgnn", "summarization_tf", "code_sum_drl", "cscg_dual"],
+    choices=[
+        "ast_nn",
+        "funcgnn",
+        "summarization_tf",
+        "code_sum_drl",
+        "cscg_dual",
+        "infercode",
+    ],
     default="ast_nn",
 )
 parser.add_argument(
@@ -645,15 +652,8 @@ elif args.model == "code_sum_drl":
     )
 
 elif args.model == "infercode":
-    # import the client
+    from infercode.src.code_to_repr import code_to_index
     from infercode.src.infercode.client.infercode_client import InferCodeClient
-
-    from infercode.src.code_to_repr import (
-        code_to_index,
-        TokenIndexerC,
-        TokenIndexerJava,
-    )
-
     from ast_probe.probe import (
         ParserLoss,
         ParserProbe,
@@ -666,7 +666,6 @@ elif args.model == "infercode":
         "valid": os.path.join(args.dataset_path, args.language, "valid.jsonl"),
         "test": os.path.join(args.dataset_path, args.language, "test.jsonl"),
     }
-    token_indexer = TokenIndexerC() if args.language == "c" else TokenIndexerJava()
 
     train_set = load_dataset("json", data_files=data_files, split="train[:4096]")
     valid_set = load_dataset("json", data_files=data_files, split="valid[:4096]")
@@ -676,21 +675,18 @@ elif args.model == "infercode":
         lambda e: code_to_index(
             e["original_string"],
             args.language,
-            indexer=token_indexer,
         )
     )
     valid_set = valid_set.map(
         lambda e: code_to_index(
             e["original_string"],
             args.language,
-            indexer=token_indexer,
         )
     )
     test_set = test_set.map(
         lambda e: code_to_index(
             e["original_string"],
             args.language,
-            indexer=token_indexer,
         )
     )
 
@@ -725,15 +721,7 @@ elif args.model == "infercode":
     )
     print(f"Max D: {max_d_len}, Max C: {max_c_len}, Max U: {max_u_len}")
 
-    MAX_TOKENS = word2vec.vectors.shape[0]
-    EMBEDDING_DIM = word2vec.vectors.shape[1]
-
-    embeddings = np.zeros((MAX_TOKENS + 1, EMBEDDING_DIM), dtype="float32")
-    embeddings[: word2vec.vectors.shape[0]] = word2vec.vectors
-
-    model_to_probe = InferCodeClient(
-        language=args.language,
-    )
+    model_to_probe = InferCodeClient(language=args.language)
 
     probe_model = ParserProbe(
         probe_rank=args.probe_rank,
