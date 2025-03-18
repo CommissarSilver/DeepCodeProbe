@@ -100,6 +100,12 @@ def get_embeddings_recoder(all_inputs, model, **kwargs):
     return embs
 
 
+def get_embeddings_type4py(all_inputs, model, **kwargs):
+    with torch.no_grad():
+        embs = model.encode(all_inputs)
+    return embs
+
+
 def collator_fn_astnn(batch):
     """
     collator function for ASTNN
@@ -243,6 +249,34 @@ def collator_fn_recoder(batch):
     cs = [b[1]["c"] for b in batch]
     ds = [b[1]["d"] for b in batch]
     us = [b[1]["u"] for b in batch]
+
+    batch_len_tokens_d = np.max([len(m) for m in ds])
+    batch_len_tokens_c = np.max([len(m) for m in cs])
+    batch_len_tokens_u = np.max([len(m) for m in us])
+
+    ds = [d + [-1] * (batch_len_tokens_d - len(d)) for d in ds]
+    cs = [c + [-1] * (batch_len_tokens_c - len(c)) for c in cs]
+    us = [u + [-1] * (batch_len_tokens_u - len(u)) for u in us]
+
+    ds_tensor = torch.tensor(ds)
+    cs_tensor = torch.tensor(cs)
+    us_tensor = torch.tensor(us)
+
+    return (
+        ds_tensor,
+        cs_tensor,
+        us_tensor,
+        torch.tensor(batch_len_tokens_c),
+        original_code_string,
+    )
+
+
+def collator_fn_type4py(batch):
+    original_code_string = [b["original_string"] for b in batch]
+
+    cs = [b["c"] for b in batch]
+    ds = [b["d"] for b in batch]
+    us = [b["u"] for b in batch]
 
     batch_len_tokens_d = np.max([len(m) for m in ds])
     batch_len_tokens_c = np.max([len(m) for m in cs])

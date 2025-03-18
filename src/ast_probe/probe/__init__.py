@@ -17,4 +17,6 @@ from .utils import (
     get_embeddings_infercode,
     get_embeddings_recoder,
     get_embeddings_sum_tf,
+    get_embeddings_type4py,
+    collator_fn_type4py,
 )

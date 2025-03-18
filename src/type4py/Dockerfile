@@ -5,9 +5,10 @@ WORKDIR /type4py/
 RUN mkdir -p /type4py/dataset
 RUN mkdir -p /type4py/t4py_model_files
 
-# Copy the source code and tar file
-COPY src /type4py
+# Copy the tar file
 COPY ManyTypes4Py.tar.gz /type4py/
+COPY src/setup.py /type4py/
+COPY src/requirements.txt /type4py/
 
 # Extract the tar file
 RUN tar -xvzf /type4py/ManyTypes4Py.tar.gz -C /type4py/dataset
@@ -16,8 +17,6 @@ ENV T4PY_LOCAL_MODE="1"
 
 # # The current model files are pickled with the below ver. of sklearn
 RUN pip install scikit-learn==0.24.1
-
-RUN pip install -e .
 # Web server's required packages
 RUN pip install -r requirements.txt
 
