@@ -24,3 +24,5 @@ services:
     build:
       context: ./src/dear
       dockerfile: Dockerfile
+    volumes:
+      - ./src/dear/src:/app

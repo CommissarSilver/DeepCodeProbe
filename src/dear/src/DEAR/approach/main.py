@@ -2,7 +2,6 @@ import os
 import time
 import subprocess
 
-
 rq = "all"
 path = os.getcwd() + "/src"
 start = time.process_time()

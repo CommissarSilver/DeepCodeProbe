@@ -1,10 +1,10 @@
 ### Requirements for Dear    ###
 
 ## Keras neural-network library ##
-keras
+keras==2.6.0
 
 ## Tensorflow neural-network library ##
-tensorflow >= 1.11.0   # CPU Version of TensorFlow.
+tensorflow==2.6.0   # CPU Version of TensorFlow.
 # tensorflow-gpu  >= 1.11.0  # GPU version of TensorFlow.
 
 ## MSGPack ##
@@ -30,3 +30,7 @@ scipy
 
 ##Gensim##
 gensim < 4.0.0
+
+javalang
+pandas
+networkx
