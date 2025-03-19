@@ -86,7 +86,7 @@ def train_probe(
     criterion = probe_loss
 
     probe_model.train()  # Set the probe model to training mode
-    #! this needs to be commented out when probing infercode since it is not a torch models
+    #! this needs to be commented out when probing infercode/dear since it is not a torch models
     model_under_probe.eval()  # Set the model under probe to evaluation mode
 
     best_eval_loss = float("inf")
