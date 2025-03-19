@@ -102,16 +102,16 @@ def ast_to_index(tree, liness):
         dcu_tuple["c"].append(line["children_id"])  # children of the node
         dcu_tuple["u"].append(line["vardict"])  # type of the node
 
-    return data, dcu_tuple
+    return dcu_tuple
 
 
 def code_to_index(code):
     try:
         tree, out = code_to_ast(code)
-        data, dcu_tuple = ast_to_index(tree, out)
-        return data, dcu_tuple
-    except:
-        return [], {"d": [], "c": [], "u": []}
+        dcu_tuple = ast_to_index(tree, out)
+        return dcu_tuple
+    except Exception as e:
+        return {"d": [], "c": [], "u": []}
 
 
 if __name__ == "__main__":
