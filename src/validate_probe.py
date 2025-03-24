@@ -1895,37 +1895,16 @@ elif args.model == "infercode":
     from infercode.src.code_to_repr import code_to_index
     from infercode.src.infercode.client.infercode_client import InferCodeClient
     from ast_probe.probe import (
-        ParserLoss,
-        ParserProbe,
-        collator_fn_infercode,
         get_embeddings_infercode,
     )
 
     # functions for calculating D,C,U similarity
     def pad_list(short_list: list, target_length: int) -> list:
-        """
-        Pads a given list with -1 values to reach the target length.
 
-        Args:
-            short_list (list): The list to be padded.
-            target_length (int): The desired length of the padded list.
-
-        Returns:
-            list: The padded list.
-        """
         return short_list + [-1] * (target_length - len(short_list))
 
     def cosine_similarity(list1: list, list2: list) -> float:
-        """
-        Compute the cosine similarity between two lists.
 
-        Args:
-            list1 (list): The first list.
-            list2 (list): The second list.
-
-        Returns:
-            similarity (float): The cosine similarity between the two lists.
-        """
         # Pad the shorter list
         if len(list1) > len(list2):
             list2 = pad_list(list2, len(list1))
@@ -1945,16 +1924,7 @@ elif args.model == "infercode":
         return similarity
 
     def average_cosine_similarity(C1: list, C2: list) -> float:
-        """
-        Calculate the average cosine similarity between two lists of lists.
 
-        Args:
-            C1 (list): The first list of lists.
-            C2 (list): The second list of lists.
-
-        Returns:
-            avg_similarity (float): The average cosine similarity between the two lists of lists.
-        """
         # Determine the length of the longest list
         max_length = max(len(C1), len(C2))
 
@@ -1971,11 +1941,7 @@ elif args.model == "infercode":
         return avg_similarity
 
     def calculate_similarity(row: pd.Series) -> tuple:
-        """
-        1 - Code is converted to infercoed's required representation.
-        2 - The cosine similarity between the D, C, U representations of the two codes is calculated.
-        3 - The C tuple is a list of tensors therefore a different function is used to calculate the average cosine similarity.
-        """
+
         tests1 = code_to_index(row["code_x"], args.language)
         tests2 = code_to_index(row["code_y"], args.language)
         return (
@@ -1985,9 +1951,7 @@ elif args.model == "infercode":
         )
 
     def get_similarity_from_asts(merged_data: pd.DataFrame) -> tuple:
-        """
-        Calculate the D,C,U similarity for the given dataset.
-        """
+
         merged_data_ds = []
         merged_data_us = []
         merged_data_cs = []
@@ -2048,7 +2012,8 @@ elif args.model == "infercode":
 
         return embeddings_trained_all, embeddings_untrained_all
 
-    # function for kick-starting the initial phase of getting embeddings and D,C,U similarity. we can use astnn's data for this
+    # function for kick-starting the initial phase of getting embeddings and D,C,U similarity.
+    # we can use astnn's data for this
     def get_initial_data():
         clone_ids = pickle.load(
             open(
@@ -2236,12 +2201,7 @@ elif args.model == "infercode":
 elif args.model == "recoder":
     from recoder.src.code_to_repr import code_to_index
     from recoder.src.run import test
-    from ast_probe.probe import (
-        ParserLoss,
-        ParserProbe,
-        collator_fn_recoder,
-        get_embeddings_recoder,
-    )
+    from ast_probe.probe import get_embeddings_recoder
 
     # functions for calculating D,C,U similarity
     def pad_list(short_list: list, target_length: int) -> list:
@@ -2388,7 +2348,8 @@ elif args.model == "recoder":
 
         return embeddings_trained_all, embeddings_untrained_all
 
-    # function for kick-starting the initial phase of getting embeddings and D,C,U similarity. we can use astnn's data for this
+    # function for kick-starting the initial phase of getting embeddings and D,C,U similarity. 
+    # we can use astnn's data for this but only the java ds.
     def get_initial_data():
         clone_ids = pickle.load(
             open(
@@ -2411,8 +2372,7 @@ elif args.model == "recoder":
 
         programs.columns = ["id", "code"]
 
-        if args.language == "c":
-            programs.drop(columns=["label"], inplace=True)
+        
         clone_ids["id1"] = clone_ids["id1"].astype(int)
         clone_ids["id2"] = clone_ids["id2"].astype(int)
 
@@ -2608,8 +2568,8 @@ elif args.model == "type4py":
         return avg_similarity
 
     def calculate_similarity(row):
-        tests1 = code_to_index(row["code_x"])
-        tests2 = code_to_index(row["code_y"])
+        tests1 = code_to_index(row["code1"])
+        tests2 = code_to_index(row["code2"])
         if tests1["d"] == [] or tests1["d"] == []:
             return (0, 0, 0)
         return (
@@ -2654,10 +2614,10 @@ elif args.model == "type4py":
         ):
             try:
                 embeddings_untrained = get_embeddings_type4py(
-                    [row["code_x"], row["code_y"]], model_to_probe_untrained
+                    [row["code1"], row["code2"]], model_to_probe_untrained
                 )
                 embeddings_trained = get_embeddings_type4py(
-                    [row["code_x"], row["code_y"]], model_to_probe_trained
+                    [row["code1"], row["code2"]], model_to_probe_trained
                 )
                 embeddings_trained_all.append(embeddings_trained)
                 embeddings_untrained_all.append(embeddings_untrained)
@@ -2669,27 +2629,330 @@ elif args.model == "type4py":
 
     # function for kick-starting the initial phase of getting embeddings and D,C,U similarity. we can use astnn's data for this
     def get_initial_data():
-        clone_ids = pickle.load(
+        dataset = pd.read_csv(
+            os.path.join(
+                os.getcwd(),
+                "src",
+                "code_sum_drl",
+                "python_clones.csv",
+            )
+        )
+
+        merged_data_similar = dataset[dataset["similar"] == 1]
+        merged_data_dissimilar = dataset[dataset["similar"] == 0]
+
+        (
+            embeddings_trained_all,
+            embeddings_untrained_all,
+        ) = get_embeddings(merged_data_similar)
+
+        pickle.dump(
+            embeddings_trained_all,
             open(
                 os.path.join(
-                    "src/code_sum_drl/dataset",
-                    args.language,
-                    "clone_ids.pkl",
+                    os.getcwd(),
+                    "src",
+                    args.model,
+                    "models",
+                    f"type4py_embeddings_trained_{args.language}_similar.pkl",
+                ),
+                "wb",
+            ),
+        )
+        pickle.dump(
+            embeddings_untrained_all,
+            open(
+                os.path.join(
+                    os.getcwd(),
+                    "src",
+                    args.model,
+                    "models",
+                    f"type4py_embeddings_untrained_{args.language}_similar.pkl",
+                ),
+                "wb",
+            ),
+        )
+
+        (
+            embeddings_trained_all,
+            embeddings_untrained_all,
+        ) = get_embeddings(merged_data_dissimilar)
+
+        pickle.dump(
+            embeddings_trained_all,
+            open(
+                os.path.join(
+                    os.getcwd(),
+                    "src",
+                    args.model,
+                    "models",
+                    f"type4py_embeddings_trained_{args.language}_dissimilar.pkl",
+                ),
+                "wb",
+            ),
+        )
+        pickle.dump(
+            embeddings_untrained_all,
+            open(
+                os.path.join(
+                    os.getcwd(),
+                    "src",
+                    args.model,
+                    "models",
+                    f"type4py_embeddings_untrained_{args.language}_dissimilar.pkl",
+                ),
+                "wb",
+            ),
+        )
+
+        print("Getting D,C,U similarity for similar")
+        get_dcu_similarity(merged_data_similar)
+
+        print("Getting D,C,U similarity for dissimilar")
+        get_dcu_similarity(merged_data_dissimilar)
+
+    # comapre the similarity of trained and untrained embeddings for siimilar and dissimilar pairs
+    def compare_embeddings(model: str = "trained", mode: str = "similar"):
+        embeddings = pickle.load(
+            open(
+                os.path.join(
+                    os.getcwd(),
+                    "src",
+                    args.model,
+                    "models",
+                    f"type4py_embeddings_{model}_{args.language}_{mode}.pkl",
                 ),
                 "rb",
             )
         )
-        programs = pd.read_csv(
-            os.path.join(
-                "src/ast_nn/dataset",
-                args.language,
-                "programs.tsv",
-            ),
-            delimiter="\t",
+        # input_shapes = set(i.shape for i in embeddings)
+
+        similarities = []
+        for row in tqdm(embeddings, total=len(embeddings)):
+            try:
+                embedding_x = row[0].reshape(-1)
+                embedding_y = row[1].reshape(-1)
+
+                embedding_x = torch.nn.functional.normalize(embedding_x, dim=0)
+                embedding_y = torch.nn.functional.normalize(embedding_y, dim=0)
+                # Calculate the cosine similarity
+                cosine_similarity = (
+                    torch.dot(embedding_x, embedding_y)
+                    / (
+                        (
+                            torch.linalg.norm(embedding_x)
+                            * torch.linalg.norm(embedding_y)
+                        )
+                    )
+                ).item()
+
+                similarities.append(cosine_similarity)
+            except:
+                pass
+
+        return sum(similarities) / len(similarities)
+
+    # get DCU similarity for the similar and dissimilar pairs
+    get_initial_data()
+    # get emebdding similarity for the similar and dissimilar pairs
+    cosine_sim_similar_trained = compare_embeddings(
+        model="trained",
+        mode="similar",
+    )
+    consine_sim_dissimilar_trained = compare_embeddings(
+        model="trained",
+        mode="dissimilar",
+    )
+
+    print(
+        f"Average cosine similarity for similar trained: {cosine_sim_similar_trained}"
+    )
+    print(
+        f"Average cosine similarity for dissimilar trained: {consine_sim_dissimilar_trained}"
+    )
+
+elif args.model == "dear":
+    from gensim.models.word2vec import Word2Vec
+
+    from dear.src.DEAR.code_to_repr import code_to_index, TokenIndexerJava
+    import keras
+    from ast_probe.probe import (
+        ParserLoss,
+        ParserProbe,
+        collator_fn_dear,
+        get_embeddings_dear,
+    )
+
+    # functions for calculating D,C,U similarity
+    def pad_list(short_list: list, target_length: int) -> list:
+        """
+        Pads a given list with -1 values to reach the target length.
+
+        Args:
+            short_list (list): The list to be padded.
+            target_length (int): The desired length of the padded list.
+
+        Returns:
+            list: The padded list.
+        """
+        return short_list + [-1] * (target_length - len(short_list))
+
+    def cosine_similarity(list1: list, list2: list) -> float:
+        """
+        Compute the cosine similarity between two lists.
+
+        Args:
+            list1 (list): The first list.
+            list2 (list): The second list.
+
+        Returns:
+            similarity (float): The cosine similarity between the two lists.
+        """
+        # Pad the shorter list
+        if len(list1) > len(list2):
+            list2 = pad_list(list2, len(list1))
+        elif len(list2) > len(list1):
+            list1 = pad_list(list1, len(list2))
+
+        # Convert lists to numpy arrays
+        vec1 = np.array(list1)
+        vec2 = np.array(list2)
+
+        # Compute cosine similarity
+        dot_product = np.dot(vec1, vec2)
+        norm_vec1 = np.linalg.norm(vec1)
+        norm_vec2 = np.linalg.norm(vec2)
+        similarity = dot_product / (norm_vec1 * norm_vec2)
+
+        return similarity
+
+    def average_cosine_similarity(C1: list, C2: list) -> float:
+        """
+        Calculate the average cosine similarity between two lists of lists.
+
+        Args:
+            C1 (list): The first list of lists.
+            C2 (list): The second list of lists.
+
+        Returns:
+            avg_similarity (float): The average cosine similarity between the two lists of lists.
+        """
+        # Determine the length of the longest list
+        max_length = max(len(C1), len(C2))
+
+        # Pad the shorter list with zero vectors
+        while len(C1) < max_length:
+            C1.append([-1] * len(C1[0]))
+        while len(C2) < max_length:
+            C2.append([-1] * len(C2[0]))
+
+        similarities = [cosine_similarity(vec1, vec2) for vec1, vec2 in zip(C1, C2)]
+
+        # Calculate average similarity
+        avg_similarity = sum(similarities) / len(similarities)
+        return avg_similarity
+
+    def calculate_similarity(row: pd.Series) -> tuple:
+        """
+        1 - Code is converted to DEAR's required representation.
+        2 - The cosine similarity between the D, C, U representations of the two codes is calculated.
+        3 - The C tuple is a list of tensors therefore a different function is used to calculate the average cosine similarity.
+        """
+        tests1 = code_to_index(row["code_x"], args.language)
+        tests2 = code_to_index(row["code_y"], args.language)
+        return (
+            cosine_similarity(tests1["d"], tests2["d"]),
+            cosine_similarity(tests1["u"], tests2["u"]),
+            average_cosine_similarity(tests1["c"], tests2["c"]),
         )
 
-        programs.columns = ["id", "code"]
+    def get_similarity_from_asts(merged_data: pd.DataFrame) -> tuple:
+        """
+        Calculate the D,C,U similarity for the given dataset.
+        """
+        merged_data_ds = []
+        merged_data_us = []
+        merged_data_cs = []
+        for index, row in tqdm(
+            merged_data.iterrows(),
+            total=len(merged_data),
+        ):
+            try:
+                similarity_ds, similarity_us, similarity_cs = calculate_similarity(row)
+                merged_data_ds.append(similarity_ds)
+                merged_data_us.append(similarity_us)
+                merged_data_cs.append(similarity_cs)
+            except:
+                merged_data_ds.append(0)
+                merged_data_us.append(0)
+                merged_data_cs.append(0)
 
+        return merged_data_ds, merged_data_us, merged_data_cs
+
+    def get_dcu_similarity(data: pd.DataFrame):
+        (
+            merged_data_ds,
+            merged_data_us,
+            merged_data_cs,
+        ) = get_similarity_from_asts(data)
+
+        print(f"Average of Ds: {sum(merged_data_ds)/len(merged_data_ds)}")
+        print(f"Average of Cs: {sum(merged_data_cs)/len(merged_data_cs)}")
+        print(f"Average of Us: {sum(merged_data_us)/len(merged_data_us)}")
+
+    # function for getting embeddings of the trained/untrained model
+    def get_embeddings(merged_data):
+        model_to_probe_untrained = keras.models.load_model(
+            "src/dear/models/untrained_orig"
+        )
+
+        model_to_probe_trained = keras.models.load_model("src/dear/models/orig")
+
+        embeddings_trained_all, embeddings_untrained_all = [], []
+        for index, row in tqdm(
+            merged_data.iterrows(),
+            total=len(merged_data),
+            desc="Validating probe trained/untrained",
+        ):
+            try:
+                embeddings_untrained = get_embeddings_dear(
+                    [row["code_x"], row["code_y"]], model_to_probe_untrained
+                )
+                embeddings_trained = get_embeddings_dear(
+                    [row["code_x"], row["code_y"]], model_to_probe_trained
+                )
+                embeddings_trained_all.append(embeddings_trained)
+                embeddings_untrained_all.append(embeddings_untrained)
+            except:
+                embeddings_trained_all.append(None)
+                embeddings_untrained_all.append(None)
+
+        return embeddings_trained_all, embeddings_untrained_all
+
+    # function for kick-starting the initial phase of getting embeddings and D,C,U similarity
+    def get_initial_data():
+        clone_ids = pickle.load(
+            open(
+                os.path.join(args.dataset_path, args.language, "clone_ids.pkl"),
+                "rb",
+            )
+        )
+        programs = (
+            pickle.load(
+                open(
+                    os.path.join(args.dataset_path, args.language, "programs.pkl"),
+                    "rb",
+                )
+            )
+            if args.language == "c"
+            else pd.read_csv(
+                os.path.join(args.dataset_path, args.language, "programs.tsv"),
+                delimiter="\t",
+            )
+        )
+        programs.columns = (
+            ["id", "code", "label"] if args.language == "c" else ["id", "code"]
+        )
         if args.language == "c":
             programs.drop(columns=["label"], inplace=True)
         clone_ids["id1"] = clone_ids["id1"].astype(int)
@@ -2721,7 +2984,7 @@ elif args.model == "type4py":
                     "src",
                     args.model,
                     "models",
-                    f"recoder_embeddings_trained_{args.language}_similar.pkl",
+                    f"dear_embeddings_trained_{args.language}_similar.pkl",
                 ),
                 "wb",
             ),
@@ -2734,7 +2997,7 @@ elif args.model == "type4py":
                     "src",
                     args.model,
                     "models",
-                    f"recoder_embeddings_untrained_{args.language}_similar.pkl",
+                    f"dear_embeddings_untrained_{args.language}_similar.pkl",
                 ),
                 "wb",
             ),
@@ -2753,7 +3016,7 @@ elif args.model == "type4py":
                     "src",
                     args.model,
                     "models",
-                    f"recoder_embeddings_trained_{args.language}_dissimilar.pkl",
+                    f"dear_embeddings_trained_{args.language}_dissimilar.pkl",
                 ),
                 "wb",
             ),
@@ -2766,7 +3029,7 @@ elif args.model == "type4py":
                     "src",
                     args.model,
                     "models",
-                    f"recoder_embeddings_untrained_{args.language}_dissimilar.pkl",
+                    f"dear_embeddings_untrained_{args.language}_dissimilar.pkl",
                 ),
                 "wb",
             ),
@@ -2787,7 +3050,7 @@ elif args.model == "type4py":
                     "src",
                     args.model,
                     "models",
-                    f"recoder_embeddings_{model}_{args.language}_{mode}.pkl",
+                    f"dear_embeddings_{model}_{args.language}_{mode}.pkl",
                 ),
                 "rb",
             )
