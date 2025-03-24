@@ -227,9 +227,9 @@ if args.model == "ast_nn":
             merged_data_cs,
         ) = get_similarity_from_asts(data)
 
-        print(f"Average of Ds: {sum(merged_data_ds)/len(merged_data_ds)}")
-        print(f"Average of Cs: {sum(merged_data_cs)/len(merged_data_cs)}")
-        print(f"Average of Us: {sum(merged_data_us)/len(merged_data_us)}")
+        print(f"Average of Ds: {sum(merged_data_ds) / len(merged_data_ds)}")
+        print(f"Average of Cs: {sum(merged_data_cs) / len(merged_data_cs)}")
+        print(f"Average of Us: {sum(merged_data_us) / len(merged_data_us)}")
 
     # function for getting embeddings of the trained/untrained model
     def get_embeddings(merged_data):
@@ -467,12 +467,7 @@ if args.model == "ast_nn":
                 # Calculate the cosine similarity
                 cosine_similarity = (
                     torch.dot(embedding_x, embedding_y)
-                    / (
-                        (
-                            torch.linalg.norm(embedding_x)
-                            * torch.linalg.norm(embedding_y)
-                        )
-                    )
+                    / (torch.linalg.norm(embedding_x) * torch.linalg.norm(embedding_y))
                 ).item()
 
                 similarities.append(cosine_similarity)
@@ -711,10 +706,8 @@ elif args.model == "funcgnn":
                     cosine_similarity = (
                         torch.dot(embedding_x, embedding_y)
                         / (
-                            (
-                                torch.linalg.norm(embedding_x)
-                                * torch.linalg.norm(embedding_y)
-                            )
+                            torch.linalg.norm(embedding_x)
+                            * torch.linalg.norm(embedding_y)
                         )
                     ).item()
 
@@ -760,10 +753,8 @@ elif args.model == "funcgnn":
                             cosine_similarity = (
                                 torch.dot(embedding_x, embedding_y)
                                 / (
-                                    (
-                                        torch.linalg.norm(embedding_x)
-                                        * torch.linalg.norm(embedding_y)
-                                    )
+                                    torch.linalg.norm(embedding_x)
+                                    * torch.linalg.norm(embedding_y)
                                 )
                             ).item()
 
@@ -1205,12 +1196,7 @@ elif args.model == "summarization_tf":
                 # Calculate the cosine similarity
                 cosine_similarity = (
                     torch.dot(embedding_x, embedding_y)
-                    / (
-                        (
-                            torch.linalg.norm(embedding_x)
-                            * torch.linalg.norm(embedding_y)
-                        )
-                    )
+                    / (torch.linalg.norm(embedding_x) * torch.linalg.norm(embedding_y))
                 ).item()
 
                 similarities.append(cosine_similarity)
@@ -1258,14 +1244,14 @@ elif args.model == "summarization_tf":
     )
 
     ds, cs, us = get_similarity_from_asts(merged_data_similar)
-    print(f"Average of Ds: {sum(ds)/len(ds)}")
-    print(f"Averagen of Cs: {sum(cs)/len(cs)}")
-    print(f"Average of Us: {sum(us)/len(us)}")
+    print(f"Average of Ds: {sum(ds) / len(ds)}")
+    print(f"Averagen of Cs: {sum(cs) / len(cs)}")
+    print(f"Average of Us: {sum(us) / len(us)}")
 
     ds, cs, us = get_similarity_from_asts(merged_data_dissimilar)
-    print(f"Average of Ds - dissimilar: {sum(ds)/len(ds)}")
-    print(f"Averagen of Cs - dissimilar: {sum(cs)/len(cs)}")
-    print(f"Average of Us - dissimilar: {sum(us)/len(us)}")
+    print(f"Average of Ds - dissimilar: {sum(ds) / len(ds)}")
+    print(f"Averagen of Cs - dissimilar: {sum(cs) / len(cs)}")
+    print(f"Average of Us - dissimilar: {sum(us) / len(us)}")
 
 elif args.model == "code_sum_drl":
     import sys
@@ -1772,12 +1758,7 @@ elif args.model == "code_sum_drl":
                 # Calculate the cosine similarity
                 cosine_similarity = (
                     torch.dot(embedding_x, embedding_y)
-                    / (
-                        (
-                            torch.linalg.norm(embedding_x)
-                            * torch.linalg.norm(embedding_y)
-                        )
-                    )
+                    / (torch.linalg.norm(embedding_x) * torch.linalg.norm(embedding_y))
                 ).item()
 
                 similarities.append(cosine_similarity)
@@ -1900,11 +1881,9 @@ elif args.model == "infercode":
 
     # functions for calculating D,C,U similarity
     def pad_list(short_list: list, target_length: int) -> list:
-
         return short_list + [-1] * (target_length - len(short_list))
 
     def cosine_similarity(list1: list, list2: list) -> float:
-
         # Pad the shorter list
         if len(list1) > len(list2):
             list2 = pad_list(list2, len(list1))
@@ -1924,7 +1903,6 @@ elif args.model == "infercode":
         return similarity
 
     def average_cosine_similarity(C1: list, C2: list) -> float:
-
         # Determine the length of the longest list
         max_length = max(len(C1), len(C2))
 
@@ -1941,7 +1919,6 @@ elif args.model == "infercode":
         return avg_similarity
 
     def calculate_similarity(row: pd.Series) -> tuple:
-
         tests1 = code_to_index(row["code_x"], args.language)
         tests2 = code_to_index(row["code_y"], args.language)
         return (
@@ -1951,7 +1928,6 @@ elif args.model == "infercode":
         )
 
     def get_similarity_from_asts(merged_data: pd.DataFrame) -> tuple:
-
         merged_data_ds = []
         merged_data_us = []
         merged_data_cs = []
@@ -1978,13 +1954,12 @@ elif args.model == "infercode":
             merged_data_cs,
         ) = get_similarity_from_asts(data)
 
-        print(f"Average of Ds: {sum(merged_data_ds)/len(merged_data_ds)}")
-        print(f"Average of Cs: {sum(merged_data_cs)/len(merged_data_cs)}")
-        print(f"Average of Us: {sum(merged_data_us)/len(merged_data_us)}")
+        print(f"Average of Ds: {sum(merged_data_ds) / len(merged_data_ds)}")
+        print(f"Average of Cs: {sum(merged_data_cs) / len(merged_data_cs)}")
+        print(f"Average of Us: {sum(merged_data_us) / len(merged_data_us)}")
 
     # function for getting embeddings of the trained/untrained model
     def get_embeddings(merged_data):
-
         model_to_probe_untrained = InferCodeClient(
             language=args.language, load_model=False
         )
@@ -2165,12 +2140,7 @@ elif args.model == "infercode":
                 # Calculate the cosine similarity
                 cosine_similarity = (
                     torch.dot(embedding_x, embedding_y)
-                    / (
-                        (
-                            torch.linalg.norm(embedding_x)
-                            * torch.linalg.norm(embedding_y)
-                        )
-                    )
+                    / (torch.linalg.norm(embedding_x) * torch.linalg.norm(embedding_y))
                 ).item()
 
                 similarities.append(cosine_similarity)
@@ -2316,13 +2286,12 @@ elif args.model == "recoder":
             merged_data_cs,
         ) = get_similarity_from_asts(data)
 
-        print(f"Average of Ds: {sum(merged_data_ds)/len(merged_data_ds)}")
-        print(f"Average of Cs: {sum(merged_data_cs)/len(merged_data_cs)}")
-        print(f"Average of Us: {sum(merged_data_us)/len(merged_data_us)}")
+        print(f"Average of Ds: {sum(merged_data_ds) / len(merged_data_ds)}")
+        print(f"Average of Cs: {sum(merged_data_cs) / len(merged_data_cs)}")
+        print(f"Average of Us: {sum(merged_data_us) / len(merged_data_us)}")
 
     # function for getting embeddings of the trained/untrained model
     def get_embeddings(merged_data):
-
         model_to_probe_untrained = test(load_weights=False)
 
         model_to_probe_trained = test(load_weights=True)
@@ -2348,7 +2317,7 @@ elif args.model == "recoder":
 
         return embeddings_trained_all, embeddings_untrained_all
 
-    # function for kick-starting the initial phase of getting embeddings and D,C,U similarity. 
+    # function for kick-starting the initial phase of getting embeddings and D,C,U similarity.
     # we can use astnn's data for this but only the java ds.
     def get_initial_data():
         clone_ids = pickle.load(
@@ -2372,7 +2341,6 @@ elif args.model == "recoder":
 
         programs.columns = ["id", "code"]
 
-        
         clone_ids["id1"] = clone_ids["id1"].astype(int)
         clone_ids["id2"] = clone_ids["id2"].astype(int)
 
@@ -2486,12 +2454,7 @@ elif args.model == "recoder":
                 # Calculate the cosine similarity
                 cosine_similarity = (
                     torch.dot(embedding_x, embedding_y)
-                    / (
-                        (
-                            torch.linalg.norm(embedding_x)
-                            * torch.linalg.norm(embedding_y)
-                        )
-                    )
+                    / (torch.linalg.norm(embedding_x) * torch.linalg.norm(embedding_y))
                 ).item()
 
                 similarities.append(cosine_similarity)
@@ -2522,12 +2485,7 @@ elif args.model == "recoder":
 elif args.model == "type4py":
     from type4py.src.type4py.code_to_repr import code_to_index
     from type4py.src.type4py.learn import Type4Py, load_model
-    from ast_probe.probe import (
-        ParserLoss,
-        ParserProbe,
-        collator_fn_type4py,
-        get_embeddings_type4py,
-    )
+    from ast_probe.probe import get_embeddings_type4py
 
     def pad_list(short_list, target_length):
         return short_list + [-1] * (target_length - len(short_list))
@@ -2599,9 +2557,8 @@ elif args.model == "type4py":
 
         return merged_data_ds, merged_data_us, merged_data_cs
 
-    # function for getting embeddings of the trained/untrained model
+    # function for getting embeddings of the trained/untrained model from the python clone dataset
     def get_embeddings(merged_data):
-
         model_to_probe_untrained = Type4Py()
 
         model_to_probe_trained = load_model()
@@ -2627,7 +2584,8 @@ elif args.model == "type4py":
 
         return embeddings_trained_all, embeddings_untrained_all
 
-    # function for kick-starting the initial phase of getting embeddings and D,C,U similarity. we can use astnn's data for this
+    # function for kick-starting the initial phase of getting embeddings and D,C,U similarity.
+    # we can use the python clone ds we used for codesumdrl here
     def get_initial_data():
         dataset = pd.read_csv(
             os.path.join(
@@ -2738,12 +2696,7 @@ elif args.model == "type4py":
                 # Calculate the cosine similarity
                 cosine_similarity = (
                     torch.dot(embedding_x, embedding_y)
-                    / (
-                        (
-                            torch.linalg.norm(embedding_x)
-                            * torch.linalg.norm(embedding_y)
-                        )
-                    )
+                    / (torch.linalg.norm(embedding_x) * torch.linalg.norm(embedding_y))
                 ).item()
 
                 similarities.append(cosine_similarity)
@@ -2772,14 +2725,9 @@ elif args.model == "type4py":
     )
 
 elif args.model == "dear":
-    from gensim.models.word2vec import Word2Vec
-
     from dear.src.DEAR.code_to_repr import code_to_index, TokenIndexerJava
     import keras
     from ast_probe.probe import (
-        ParserLoss,
-        ParserProbe,
-        collator_fn_dear,
         get_embeddings_dear,
     )
 
@@ -2896,9 +2844,9 @@ elif args.model == "dear":
             merged_data_cs,
         ) = get_similarity_from_asts(data)
 
-        print(f"Average of Ds: {sum(merged_data_ds)/len(merged_data_ds)}")
-        print(f"Average of Cs: {sum(merged_data_cs)/len(merged_data_cs)}")
-        print(f"Average of Us: {sum(merged_data_us)/len(merged_data_us)}")
+        print(f"Average of Ds: {sum(merged_data_ds) / len(merged_data_ds)}")
+        print(f"Average of Cs: {sum(merged_data_cs) / len(merged_data_cs)}")
+        print(f"Average of Us: {sum(merged_data_us) / len(merged_data_us)}")
 
     # function for getting embeddings of the trained/untrained model
     def get_embeddings(merged_data):
@@ -2937,24 +2885,13 @@ elif args.model == "dear":
                 "rb",
             )
         )
-        programs = (
-            pickle.load(
-                open(
-                    os.path.join(args.dataset_path, args.language, "programs.pkl"),
-                    "rb",
-                )
-            )
-            if args.language == "c"
-            else pd.read_csv(
-                os.path.join(args.dataset_path, args.language, "programs.tsv"),
-                delimiter="\t",
-            )
+        programs = pd.read_csv(
+            os.path.join(args.dataset_path, args.language, "programs.tsv"),
+            delimiter="\t",
         )
-        programs.columns = (
-            ["id", "code", "label"] if args.language == "c" else ["id", "code"]
-        )
-        if args.language == "c":
-            programs.drop(columns=["label"], inplace=True)
+
+        programs.columns = ["id", "code"]
+
         clone_ids["id1"] = clone_ids["id1"].astype(int)
         clone_ids["id2"] = clone_ids["id2"].astype(int)
 
@@ -3068,12 +3005,7 @@ elif args.model == "dear":
                 # Calculate the cosine similarity
                 cosine_similarity = (
                     torch.dot(embedding_x, embedding_y)
-                    / (
-                        (
-                            torch.linalg.norm(embedding_x)
-                            * torch.linalg.norm(embedding_y)
-                        )
-                    )
+                    / (torch.linalg.norm(embedding_x) * torch.linalg.norm(embedding_y))
                 ).item()
 
                 similarities.append(cosine_similarity)
