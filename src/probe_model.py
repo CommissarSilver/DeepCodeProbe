@@ -39,6 +39,9 @@ parser.add_argument(
         "code_sum_drl",
         "cscg_dual",
         "infercode",
+        "recoder",
+        "type4py",
+        "dear",
     ],
     default="ast_nn",
 )
@@ -85,7 +88,15 @@ parser.add_argument(
     type=int,
     default=200,
     choices=[200, 64, 512],
-    help="Hidden dimension of the probe. 200 for AST-NN. 64 for FuncGnn, 512 for SumTF, 512 for CodeSumDRL",
+    help="Hidden dimension of the probe.\
+          200 for AST-NN. \
+          64 for FuncGnn. \
+          512 for SumTF. \
+          512 for CodeSumDRL. \
+          100 for Recoder. \
+          200 for Recoder. \
+          200 for Type4Py. \
+          200 for DEAR.",
 )
 args = parser.parse_args()
 #### Arguemnt Parser ####
